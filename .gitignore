@@ -1,15 +1,3 @@
-# Godot-specific ignores
-*.uid
+# Ignore Godot files
 .godot/
-
-# C# build artifacts
-bin/
-obj/
-
-# IDE
-.vs/
-.vscode/
-*.csproj.user
-
-# Godot UIDs
 *.uid
