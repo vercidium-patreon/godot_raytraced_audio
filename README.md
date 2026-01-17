@@ -27,7 +27,7 @@ Raytraced audio system with realistic occlusion and reverb for Godot 4.
 ![Screenshot of the your_game\.godot\mono\temp\bin\Debug](docs/build_folder_example.png)
 
 
-3. Continue reading in [project setup](./PROJECT_SETUP.md) .
+3. Continue reading in [project setup](./PROJECT_SETUP.md).
 
 ## Requirements
 
