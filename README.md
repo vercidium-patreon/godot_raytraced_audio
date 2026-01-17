@@ -1,6 +1,6 @@
-# Vercidium Audio (VAudio) - Godot Plugin
+# Vercidium Audio
 
-Raytraced audio system with realistic occlusion, and reverb for Godot 4.
+Raytraced audio system with realistic occlusion and reverb for Godot 4.
 
 ## Features
 
