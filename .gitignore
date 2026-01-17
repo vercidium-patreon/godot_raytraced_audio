@@ -1,0 +1,15 @@
+# Godot-specific ignores
+*.uid
+.godot/
+
+# C# build artifacts
+bin/
+obj/
+
+# IDE
+.vs/
+.vscode/
+*.csproj.user
+
+# Godot UIDs
+*.uid
