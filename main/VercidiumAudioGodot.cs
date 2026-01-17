@@ -112,6 +112,13 @@ public partial class VercidiumAudio : Node
 
         // TODO - allow custom listener positions (e.g. no Camera3D)
         var camera = GetViewport().GetCamera3D();
+
+        if (camera == null)
+        {
+            GD.PushError("godot_raytraced_audio: no Camera3D found");
+            return;
+        }
+        
         var pos = camera.GlobalPosition;
 
         var cameraPosition = new vaudio.Vector3F(pos.X, pos.Y, pos.Z);
