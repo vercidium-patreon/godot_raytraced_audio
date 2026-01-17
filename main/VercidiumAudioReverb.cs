@@ -15,7 +15,7 @@ public partial class VercidiumAudio : Node
         // Update ambient gain
         {
             var ambientClarity = Lerp(0.0f, 1.0f, MathF.Min(1, context.ProcessedReverb.OutsidePercent / 0.4f));
-            float gain = 0.3f + ambientClarity * 0.7f;
+            float gain = 0.15f + ambientClarity * 0.85f;
             float gainHF = MathF.Pow(gain, 1.5f);
 
             ambientFilter ??= new(gain, gainHF);

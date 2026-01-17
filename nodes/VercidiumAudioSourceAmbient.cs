@@ -36,6 +36,7 @@ public partial class VercidiumAudioSourceAmbient : ALSource3D
         if (vercidiumAudio?.ambientFilter == null)
             return;
 
+        effect = vercidiumAudio.listenerReverbEffect;
         UpdateFilter(vercidiumAudio.ambientFilter.gain, vercidiumAudio.ambientFilter.gainHF);
 
         if (!_played)
