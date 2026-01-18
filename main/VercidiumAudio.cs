@@ -16,7 +16,6 @@ public partial class VercidiumAudio : Node
         Debug.Assert(voice != null);
 
         context.RemoveVoice(voice);
-        GD.Print($"Detached voice from Node: {node.Name}");
     }
 
     // Helpers

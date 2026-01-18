@@ -43,7 +43,7 @@ public partial class VercidiumAudio : Node
         // Wait a frame for the scene to be fully loaded
         CallDeferred(nameof(InitializeScene));
         
-        GD.Print("VercidiumAudio ready");
+        GD.Print("godot_raytraced_audio: ready");
     }
 
     void InitializeScene()

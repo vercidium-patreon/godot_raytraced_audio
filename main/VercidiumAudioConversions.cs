@@ -1,3 +1,5 @@
+using System.Xml.Linq;
+
 namespace godot_raytraced_audio;
 
 public partial class VercidiumAudio : Node
@@ -19,21 +21,7 @@ public partial class VercidiumAudio : Node
         );
     }
 
-    // Helper method
-    static void AddVertexAndUpdateBounds(Vector3 vertex, ref vaudio.Vector3F min, ref vaudio.Vector3F max, List<vaudio.Vector3F> triangles)
-    {
-        triangles.Add(ToVAudio(vertex));
-
-        // Update bounds
-        min.X = Math.Min(min.X, vertex.X);
-        min.Y = Math.Min(min.Y, vertex.Y);
-        min.Z = Math.Min(min.Z, vertex.Z);
-        max.X = Math.Max(max.X, vertex.X);
-        max.Y = Math.Max(max.Y, vertex.Y);
-        max.Z = Math.Max(max.Z, vertex.Z);
-    }
-
-    public static List<vaudio.Vector3F> ConvertMeshToVector3FList(Mesh mesh, out vaudio.Vector3F minOut, out vaudio.Vector3F maxOut)
+    public static List<vaudio.Vector3F> ConvertMeshToVector3FList(string name,Mesh mesh, out vaudio.Vector3F minOut, out vaudio.Vector3F maxOut)
     {
         List<vaudio.Vector3F> vertices = [];
 
@@ -140,6 +128,8 @@ public partial class VercidiumAudio : Node
         {
             min = vaudio.Vector3F.Zero;
             max = vaudio.Vector3F.Zero;
+
+            GD.PushWarning($"godot_raytraced_audio: Mesh {name} will not affect raytracing as it has no vertices");
         }
 
         minOut = min;
@@ -148,7 +138,7 @@ public partial class VercidiumAudio : Node
         return vertices;
     }
 
-    public static List<vaudio.Vector3F> ConvertConcavePolygonToVector3FList(ConcavePolygonShape3D shape, out vaudio.Vector3F min, out vaudio.Vector3F max)
+    public static List<vaudio.Vector3F> ConvertConcavePolygonToVector3FList(string name, ConcavePolygonShape3D shape, out vaudio.Vector3F min, out vaudio.Vector3F max)
     {
         Vector3[] faces = shape.GetFaces();
 
@@ -156,6 +146,8 @@ public partial class VercidiumAudio : Node
         {
             min = new vaudio.Vector3F(0, 0, 0);
             max = new vaudio.Vector3F(0, 0, 0);
+
+            GD.PushWarning($"godot_raytraced_audio: ConcavePolygonShape3D {name} will not affect raytracing as it has no faces");
             return [];
         }
 
@@ -166,11 +158,7 @@ public partial class VercidiumAudio : Node
 
         for (int i = 0; i < faces.Length; i++)
         {
-            vaudio.Vector3F vertex = new(
-                faces[i].X,
-                faces[i].Y,
-                faces[i].Z
-            );
+            vaudio.Vector3F vertex = ToVAudio(faces[i]);
 
             vertices.Add(vertex);
 
@@ -185,5 +173,95 @@ public partial class VercidiumAudio : Node
         }
 
         return vertices;
+    }
+
+    public static List<vaudio.Vector3F> ConvertConvexPolygonToVector3FList(string name, ConvexPolygonShape3D shape, out vaudio.Vector3F min, out vaudio.Vector3F max)
+    {
+        // Use the debug mesh to triangulate the polygon
+        var debugMesh = shape.GetDebugMesh();
+
+        if (debugMesh == null)
+        {
+            min = new vaudio.Vector3F(0, 0, 0);
+            max = new vaudio.Vector3F(0, 0, 0);
+
+            GD.PushWarning($"godot_raytraced_audio: ConvexPolygonShape3D {name} will not affect raytracing as it cannot be triangulated");
+            return [];
+        }
+
+        return ConvertMeshToVector3FList(name, debugMesh, out min, out max);
+    }
+
+    public static List<vaudio.Vector3F> ConvertHeightMapToVector3FList(string name, HeightMapShape3D shape, out vaudio.Vector3F min, out vaudio.Vector3F max)
+    {
+        int mapWidth = shape.MapWidth;
+        int mapDepth = shape.MapDepth;
+        float[] mapData = shape.MapData;
+
+        // Skip invalid heightmaps
+        if (mapWidth < 2 || mapDepth < 2 || mapData.Length < mapWidth * mapDepth)
+        {
+            min = new vaudio.Vector3F(0, 0, 0);
+            max = new vaudio.Vector3F(0, 0, 0);
+
+            GD.PushWarning($"godot_raytraced_audio: HeightMapShape3D {name} will not affect raytracing as its dimensions are less than 2x2");
+            return [];
+        }
+
+        List<vaudio.Vector3F> triangles = [];
+
+        min = vaudio.Vector3F.MAX;
+        max = vaudio.Vector3F.MIN;
+
+        // HeightMapShape3D nodes are centered at the origin,
+        //  spanning from -width / 2 to + width / 2 and -depth / 2 to +depth / 2
+        float halfWidth = (mapWidth - 1) / 2.0f;
+        float halfDepth = (mapDepth - 1) / 2.0f;
+
+        for (int z = 0; z < mapDepth - 1; z++)
+        {
+            for (int x = 0; x < mapWidth - 1; x++)
+            {
+                // Get heights for the 4 corners of this cell
+                float h00 = mapData[x + 0 + mapWidth * (z + 0)];
+                float h10 = mapData[x + 1 + mapWidth * (z + 0)];
+                float h01 = mapData[x + 0 + mapWidth * (z + 1)];
+                float h11 = mapData[x + 1 + mapWidth * (z + 1)];
+
+                // Skip invalid heights
+                if (IsNaNorInfinity(h00) || IsNaNorInfinity(h10) || IsNaNorInfinity(h01) || IsNaNorInfinity(h11))
+                    continue;
+
+                // Calculate world positions (centered at origin)
+                vaudio.Vector3F v00 = new(x     - halfWidth, h00, z     - halfDepth);
+                vaudio.Vector3F v10 = new(x + 1 - halfWidth, h10, z     - halfDepth);
+                vaudio.Vector3F v01 = new(x     - halfWidth, h01, z + 1 - halfDepth);
+                vaudio.Vector3F v11 = new(x + 1 - halfWidth, h11, z + 1 - halfDepth);
+
+                // Create two triangles for each quad, with counter-clockwise winding for upward-facing normals
+                triangles.Add(v00);
+                triangles.Add(v01);
+                triangles.Add(v10);
+                triangles.Add(v10);
+                triangles.Add(v01);
+                triangles.Add(v11);
+
+                // Update bounds
+                min.X = Math.Min(min.X, Math.Min(v00.X, Math.Min(v10.X, Math.Min(v01.X, v11.X))));
+                min.Y = Math.Min(min.Y, Math.Min(v00.Y, Math.Min(v10.Y, Math.Min(v01.Y, v11.Y))));
+                min.Z = Math.Min(min.Z, Math.Min(v00.Z, Math.Min(v10.Z, Math.Min(v01.Z, v11.Z))));
+                max.X = Math.Max(max.X, Math.Max(v00.X, Math.Max(v10.X, Math.Max(v01.X, v11.X))));
+                max.Y = Math.Max(max.Y, Math.Max(v00.Y, Math.Max(v10.Y, Math.Max(v01.Y, v11.Y))));
+                max.Z = Math.Max(max.Z, Math.Max(v00.Z, Math.Max(v10.Z, Math.Max(v01.Z, v11.Z))));
+            }
+        }
+
+        if (triangles.Count == 0)
+        {
+            min = new vaudio.Vector3F(0, 0, 0);
+            max = new vaudio.Vector3F(0, 0, 0);
+        }
+
+        return triangles;
     }
 }

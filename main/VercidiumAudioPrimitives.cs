@@ -1,3 +1,5 @@
+using Godot;
+
 namespace godot_raytraced_audio;
 
 public partial class VercidiumAudio : Node
@@ -14,14 +16,18 @@ public partial class VercidiumAudio : Node
 
         if (node is CsgBox3D csgBox)
             CreateVAudioPrimitive(csgBox, material);
+        else if (node is CsgCylinder3D csgCylinder)
+            CreateVAudioPrimitive(csgCylinder, material);
+        else if (node is CsgSphere3D csgSphere)
+            CreateVAudioPrimitive(csgSphere, material);
+        else if (node is CsgPolygon3D csgPolygon)
+            CreateVAudioPrimitive(csgPolygon, material);
+        else if (node is CsgMesh3D csgMesh)
+            CreateVAudioPrimitive(csgMesh, material);
         else if (node is CollisionShape3D collisionShape)
             CreateVAudioPrimitive(collisionShape, material);
         else if (node is MeshInstance3D meshInstance)
             CreateVAudioPrimitive(meshInstance, material);
-        else
-        {
-            // TODO - support all Godot 3D objects   
-        }
 
         foreach (Node child in node.GetChildren())
             CollectPrimitivesRecursive(child, material);
@@ -60,6 +66,152 @@ public partial class VercidiumAudio : Node
         csgBox.SetMeta(PRIMITIVE_META_KEY, new VercidiumAudioPrimitiveRef { Primitive = prim });
     }
 
+    void CreateVAudioPrimitive(CsgCylinder3D csgCylinder, vaudio.MaterialType material)
+    {
+        Debug.Assert(material != vaudio.MaterialType.Air);
+
+        // Skip if it's already been added to the raytracing scene
+        if (csgCylinder.HasMeta(PRIMITIVE_META_KEY))
+        {
+            Debug.Assert(false);
+            return;
+        }
+
+        // CsgCylinder3D can be either a cylinder or a cone depending on the Cone property
+        vaudio.Primitive prim;
+
+        if (csgCylinder.Cone)
+        {
+            // Godot's CsgCylinder3D cone is centered at origin (base at -Height/2, apex at +Height/2)
+            // VAudio's ConePrimitive has base at Y=0 and apex at Y=height
+            // We need to offset the transform down by Height/2 so the base aligns
+            var globalTransform = csgCylinder.GlobalTransform;
+            var offsetTransform = globalTransform.TranslatedLocal(new Vector3(0, -csgCylinder.Height / 2, 0));
+
+            prim = new vaudio.ConePrimitive()
+            {
+                radius = csgCylinder.Radius,
+                height = csgCylinder.Height,
+                transform = ToVAudio(offsetTransform),
+                material = material
+            };
+        }
+        else
+        {
+            prim = new vaudio.CylinderPrimitive()
+            {
+                radius = csgCylinder.Radius,
+                length = csgCylinder.Height,
+                transform = ToVAudio(csgCylinder.GlobalTransform),
+                material = material
+            };
+        }
+
+        context.AddPrimitive(prim);
+
+        csgCylinder.SetMeta(PRIMITIVE_META_KEY, new VercidiumAudioPrimitiveRef { Primitive = prim });
+    }
+
+    void CreateVAudioPrimitive(CsgSphere3D csgSphere, vaudio.MaterialType material)
+    {
+        Debug.Assert(material != vaudio.MaterialType.Air);
+
+        // Skip if it's already been added to the raytracing scene
+        if (csgSphere.HasMeta(PRIMITIVE_META_KEY))
+        {
+            Debug.Assert(false);
+            return;
+        }
+
+        var globalTransform = csgSphere.GlobalTransform;
+
+        vaudio.SpherePrimitive prim = new()
+        {
+            center = ToVAudio(globalTransform.Origin),
+            radius = csgSphere.Radius,
+            material = material
+        };
+
+        context.AddPrimitive(prim);
+
+        csgSphere.SetMeta(PRIMITIVE_META_KEY, new VercidiumAudioPrimitiveRef { Primitive = prim });
+    }
+
+    void CreateVAudioPrimitive(CsgPolygon3D csgPolygon, vaudio.MaterialType material)
+    {
+        Debug.Assert(material != vaudio.MaterialType.Air);
+
+        // Skip if it's already been added to the raytracing scene
+        if (csgPolygon.HasMeta(PRIMITIVE_META_KEY))
+        {
+            Debug.Assert(false);
+            return;
+        }
+
+        // CsgPolygon3D generates a mesh from a 2D polygon extruded/spun in 3D
+        // GetMeshes() returns an array of [Transform3D, Mesh] pairs
+        var meshes = csgPolygon.GetMeshes();
+        if (meshes == null || meshes.Count < 2)
+        {
+            GD.PushWarning($"godot_raytraced_audio: CsgPolygon3D {csgPolygon.Name} will not affect rayracing as it has no mesh");
+            return;
+        }
+
+        // The mesh is at index 1 (index 0 is the transform)
+        var mesh = meshes[1].As<Mesh>();
+        if (mesh == null)
+        {
+            GD.PushWarning($"godot_raytraced_audio: CsgPolygon3D {csgPolygon.Name} will not affect rayracing as it's mesh is invalid");
+            return;
+        }
+
+        var triangles = ConvertMeshToVector3FList(csgPolygon.Name, mesh, out var min, out var max);
+
+        if (triangles.Count == 0)
+            return;
+
+        var transform = ToVAudio(csgPolygon.GlobalTransform);
+
+        vaudio.MeshPrimitive prim = new(material, triangles, min, max, transform, true);
+
+        context.AddPrimitive(prim);
+
+        csgPolygon.SetMeta(PRIMITIVE_META_KEY, new VercidiumAudioPrimitiveRef { Primitive = prim });
+    }
+
+    void CreateVAudioPrimitive(CsgMesh3D csgMesh, vaudio.MaterialType material)
+    {
+        Debug.Assert(material != vaudio.MaterialType.Air);
+
+        // Skip if it's already been added to the raytracing scene
+        if (csgMesh.HasMeta(PRIMITIVE_META_KEY))
+        {
+            Debug.Assert(false);
+            return;
+        }
+
+        // CsgMesh3D has a Mesh property that can be used directly
+        var mesh = csgMesh.Mesh;
+        if (mesh == null)
+        {
+            GD.PushWarning($"godot_raytraced_audio: CsgMesh3D {csgMesh.Name} will not affect rayracing as it has no mesh");
+            return;
+        }
+
+        var triangles = ConvertMeshToVector3FList(csgMesh.Name, mesh, out var min, out var max);
+
+        if (triangles.Count == 0)
+            return;
+
+        var transform = ToVAudio(csgMesh.GlobalTransform);
+
+        vaudio.MeshPrimitive prim = new(material, triangles, min, max, transform, true);
+
+        context.AddPrimitive(prim);
+
+        csgMesh.SetMeta(PRIMITIVE_META_KEY, new VercidiumAudioPrimitiveRef { Primitive = prim });
+    }
+
     void CreateVAudioPrimitive(CollisionShape3D collisionShape, vaudio.MaterialType material)
     {
         Debug.Assert(material != vaudio.MaterialType.Air);
@@ -88,31 +240,114 @@ public partial class VercidiumAudio : Node
                 material = material
             });
         }
-        else if (shape is SphereShape3D)
+        else if (shape is SphereShape3D sphere)
         {
             context.AddPrimitive(prim = new vaudio.SpherePrimitive()
             {
                 center = new vaudio.Vector3F(position.X, position.Y, position.Z),
-                radius = scale.X,
+                radius = sphere.Radius * scale.X,
                 material = material
             });
         }
-        else if (shape is ConcavePolygonShape3D polygon)
+        else if (shape is CapsuleShape3D capsule)
         {
-            var triangles = ConvertConcavePolygonToVector3FList(polygon, out var min, out var max);
+            // Godot CapsuleShape3D: height is total height including hemispherical caps, radius is the radius
+            // vaudio.CapsulePrimitive: length is the cylinder portion (not including caps), radius is the radius
+            // The cylinder length = total height - 2 * radius
+            float cylinderLength = capsule.Height - 2 * capsule.Radius;
+            if (cylinderLength < 0) cylinderLength = 0;
+
+            context.AddPrimitive(prim = new vaudio.CapsulePrimitive()
+            {
+                radius = capsule.Radius * scale.X,
+                length = cylinderLength * scale.Y,
+                transform = ToVAudio(globalTransform),
+                material = material
+            });
+        }
+        else if (shape is CylinderShape3D cylinder)
+        {
+            context.AddPrimitive(prim = new vaudio.CylinderPrimitive()
+            {
+                radius = cylinder.Radius * scale.X,
+                length = cylinder.Height * scale.Y,
+                transform = ToVAudio(globalTransform),
+                material = material
+            });
+        }
+        else if (shape is WorldBoundaryShape3D worldBoundary)
+        {
+            // WorldBoundaryShape3D represents an infinite plane, we approximate with a large plane
+            var plane = worldBoundary.Plane;
+            var normal = plane.Normal;
+
+            // vaudio.PlanePrimitive lies in XZ plane at Y=0 in local space, with Y-up as the normal
+            // So we need basisY to be the plane normal
+            var basisY = new Vector3(normal.X, normal.Y, normal.Z);
+            var basisX = basisY.Cross(Vector3.Forward).Normalized();
+
+            if (basisX.LengthSquared() < 0.001f)
+                basisX = basisY.Cross(Vector3.Right).Normalized();
+
+            var basisZ = basisX.Cross(basisY).Normalized();
+
+            // The plane position is: point on plane (normal * D) + the collision shape's global position
+            var planePosition = normal * plane.D + globalTransform.Origin;
+
+            var planeTransform = new Transform3D(
+                new Basis(basisX, basisY, basisZ),
+                planePosition
+            );
+
+            var worldMagnitude = context.WorldSize.Magnitude;
+
+            context.AddPrimitive(prim = new vaudio.PlanePrimitive()
+            {
+                // Use the max world size to ensure the plane covers the raytracing scene
+                //  * 2 in case the plane is positioned in the corner of the world
+                width = worldMagnitude * 2,
+                height = worldMagnitude * 2,
+                transform = ToVAudio(planeTransform),
+                material = material
+            });
+        }
+        else if (shape is ConvexPolygonShape3D convexPolygon)
+        {
+            var triangles = ConvertConvexPolygonToVector3FList(collisionShape.Name, convexPolygon, out var min, out var max);
             var transform = ToVAudio(globalTransform);
 
-            prim = new vaudio.MeshPrimitive(material, triangles, min, max, transform, true);
-            context.AddPrimitive(prim);
+            if (triangles.Count > 0)
+            {
+                prim = new vaudio.MeshPrimitive(material, triangles, min, max, transform, true);
+                context.AddPrimitive(prim);
+            }
         }
-        else
+        else if (shape is HeightMapShape3D heightMap)
         {
-            // TODO - other primitive types
-            GD.PrintErr($"CollisionShape3D not converted to raytraced primitive: {collisionShape.Name}");
-            return;
+            var triangles = ConvertHeightMapToVector3FList(collisionShape.Name, heightMap, out var min, out var max);
+            var transform = ToVAudio(globalTransform);
+
+            if (triangles.Count > 0)
+            {
+                prim = new vaudio.MeshPrimitive(material, triangles, min, max, transform, true);
+                context.AddPrimitive(prim);
+            }
+        }
+        else if (shape is ConcavePolygonShape3D polygon)
+        {
+            var triangles = ConvertConcavePolygonToVector3FList(collisionShape.Name, polygon, out var min, out var max);
+            var transform = ToVAudio(globalTransform);
+
+            if (triangles.Count > 0)
+            {
+                prim = new vaudio.MeshPrimitive(material, triangles, min, max, transform, true);
+                context.AddPrimitive(prim);
+            }
         }
 
-        Debug.Assert(prim != null);
+        // If the mesh had no valid triangles, skip it
+        if (prim == null)
+            return;
 
         // Store the primitive on the collision shape, so we can update it later if it moves
         collisionShape.SetMeta(PRIMITIVE_META_KEY, new VercidiumAudioPrimitiveRef { Primitive = prim });
@@ -132,19 +367,15 @@ public partial class VercidiumAudio : Node
         var mesh = meshInstance.Mesh;
         if (mesh == null)
         {
-            // TODO - GD.PrintErr, or throw an exception?
-            GD.PrintErr($"MeshInstance3D '{meshInstance.Name}' has no mesh assigned");
+            GD.PushWarning($"godot_raytraced_audio: MeshInstance3D {meshInstance.Name} will not affect rayracing as it has no mesh");
             return;
         }
 
         // Convert mesh to triangle list
-        var triangles = ConvertMeshToVector3FList(mesh, out var min, out var max);
+        var triangles = ConvertMeshToVector3FList(meshInstance.Name, mesh, out var min, out var max);
 
         if (triangles.Count == 0)
-        {
-            GD.PrintErr($"MeshInstance3D '{meshInstance.Name}' has no triangles");
             return;
-        }
 
         var transform = ToVAudio(meshInstance.GlobalTransform);
 
@@ -158,8 +389,6 @@ public partial class VercidiumAudio : Node
 
         var wrapper = new VercidiumAudioPrimitiveRef { Primitive = prim };
         meshInstance.SetMeta(PRIMITIVE_META_KEY, wrapper);
-
-        GD.Print($"Created VAudio mesh primitive for '{meshInstance.Name}' with {triangles.Count / 3} triangles");
     }
 
     static void UpdatePrimitivesRecursive(Node node)
@@ -179,6 +408,48 @@ public partial class VercidiumAudio : Node
                     prism.transform = ToVAudio(globalTransform);
                 }
             }
+            else if (node is CsgCylinder3D csgCylinder && csgCylinder.HasMeta(PRIMITIVE_META_KEY))
+            {
+                if (primitive is vaudio.CylinderPrimitive cylinderPrim)
+                {
+                    cylinderPrim.radius = csgCylinder.Radius;
+                    cylinderPrim.length = csgCylinder.Height;
+                    cylinderPrim.transform = ToVAudio(csgCylinder.GlobalTransform);
+                }
+                else if (primitive is vaudio.ConePrimitive conePrim)
+                {
+                    // Godot's CsgCylinder3D cone is centered at origin (base at -Height/2, apex at +Height/2)
+                    // VAudio's ConePrimitive has base at Y=0 and apex at Y=height
+                    var globalTransform = csgCylinder.GlobalTransform;
+                    var offsetTransform = globalTransform.TranslatedLocal(new Vector3(0, -csgCylinder.Height / 2, 0));
+
+                    conePrim.radius = csgCylinder.Radius;
+                    conePrim.height = csgCylinder.Height;
+                    conePrim.transform = ToVAudio(offsetTransform);
+                }
+            }
+            else if (node is CsgSphere3D csgSphere && csgSphere.HasMeta(PRIMITIVE_META_KEY))
+            {
+                if (primitive is vaudio.SpherePrimitive spherePrim)
+                {
+                    spherePrim.center = ToVAudio(csgSphere.GlobalTransform.Origin);
+                    spherePrim.radius = csgSphere.Radius;
+                }
+            }
+            else if (node is CsgPolygon3D csgPolygon && csgPolygon.HasMeta(PRIMITIVE_META_KEY))
+            {
+                if (primitive is vaudio.MeshPrimitive meshPrim)
+                {
+                    meshPrim.transform = ToVAudio(csgPolygon.GlobalTransform);
+                }
+            }
+            else if (node is CsgMesh3D csgMesh && csgMesh.HasMeta(PRIMITIVE_META_KEY))
+            {
+                if (primitive is vaudio.MeshPrimitive meshPrim)
+                {
+                    meshPrim.transform = ToVAudio(csgMesh.GlobalTransform);
+                }
+            }
             else if (node is CollisionShape3D collisionShape && collisionShape.HasMeta(PRIMITIVE_META_KEY))
             {
                 var globalTransform = collisionShape.GlobalTransform;
@@ -191,7 +462,7 @@ public partial class VercidiumAudio : Node
                 else if (primitive is vaudio.SpherePrimitive sphere)
                 {
                     sphere.center = ToVAudio(globalTransform.Origin);
-                    sphere.radius = collisionShape.Scale.X;
+                    sphere.radius = sphere.radius * collisionShape.Scale.X;
                 }
                 else if (primitive is vaudio.PrismPrimitive prism)
                 {
@@ -199,6 +470,50 @@ public partial class VercidiumAudio : Node
 
                     prism.size = ToVAudio(box.Size);
                     prism.transform = ToVAudio(globalTransform);
+                }
+                else if (primitive is vaudio.CapsulePrimitive capsulePrim)
+                {
+                    var capsule = collisionShape.Shape as CapsuleShape3D;
+                    var scale = collisionShape.Scale;
+
+                    float cylinderLength = capsule.Height - 2 * capsule.Radius;
+                    if (cylinderLength < 0) cylinderLength = 0;
+
+                    capsulePrim.radius = capsule.Radius * scale.X;
+                    capsulePrim.length = cylinderLength * scale.Y;
+                    capsulePrim.transform = ToVAudio(globalTransform);
+                }
+                else if (primitive is vaudio.CylinderPrimitive cylinderPrim)
+                {
+                    var cylinder = collisionShape.Shape as CylinderShape3D;
+                    var scale = collisionShape.Scale;
+
+                    cylinderPrim.radius = cylinder.Radius * scale.X;
+                    cylinderPrim.length = cylinder.Height * scale.Y;
+                    cylinderPrim.transform = ToVAudio(globalTransform);
+                }
+                else if (primitive is vaudio.PlanePrimitive planePrim)
+                {
+                    var worldBoundary = collisionShape.Shape as WorldBoundaryShape3D;
+                    var plane = worldBoundary.Plane;
+                    var normal = plane.Normal;
+
+                    // VAudio PlanePrimitive lies in XZ plane at Y=0 in local space, with Y-up as the normal
+                    var basisY = new Vector3(normal.X, normal.Y, normal.Z);
+                    var basisX = basisY.Cross(Vector3.Forward).Normalized();
+                    if (basisX.LengthSquared() < 0.001f)
+                        basisX = basisY.Cross(Vector3.Right).Normalized();
+                    var basisZ = basisX.Cross(basisY).Normalized();
+
+                    // The plane position is: point on plane (normal * D) + the collision shape's global position
+                    var planePosition = normal * plane.D + globalTransform.Origin;
+
+                    var planeTransform = new Transform3D(
+                        new Basis(basisX, basisY, basisZ),
+                        planePosition
+                    );
+
+                    planePrim.transform = ToVAudio(planeTransform);
                 }
             }
             else if (node is MeshInstance3D meshInstance && meshInstance.HasMeta(PRIMITIVE_META_KEY))
