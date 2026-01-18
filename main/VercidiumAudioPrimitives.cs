@@ -14,14 +14,18 @@ public partial class VercidiumAudio : Node
 
         if (node is CsgBox3D csgBox)
             CreateVAudioPrimitive(csgBox, material);
+        else if (node is CsgCylinder3D csgCylinder)
+        {
+            // TODO
+        }
+        else if (node is CsgSphere3D csgSphere)
+        {
+            // TODO
+        }
         else if (node is CollisionShape3D collisionShape)
             CreateVAudioPrimitive(collisionShape, material);
         else if (node is MeshInstance3D meshInstance)
             CreateVAudioPrimitive(meshInstance, material);
-        else
-        {
-            // TODO - support all Godot 3D objects   
-        }
 
         foreach (Node child in node.GetChildren())
             CollectPrimitivesRecursive(child, material);
@@ -130,16 +134,20 @@ public partial class VercidiumAudio : Node
             var normal = plane.Normal;
 
             // Create a transform that aligns the plane primitive with the world boundary
-            // PlanePrimitive is centered at origin and lies in XY plane by default
-            var basisZ = new Vector3(normal.X, normal.Y, normal.Z);
-            var basisX = basisZ.Cross(Vector3.Up).Normalized();
+            // VAudio PlanePrimitive lies in XZ plane at Y=0 in local space, with Y-up as the normal
+            // So we need basisY to be the plane normal
+            var basisY = new Vector3(normal.X, normal.Y, normal.Z);
+            var basisX = basisY.Cross(Vector3.Forward).Normalized();
             if (basisX.LengthSquared() < 0.001f)
-                basisX = basisZ.Cross(Vector3.Right).Normalized();
-            var basisY = basisZ.Cross(basisX).Normalized();
+                basisX = basisY.Cross(Vector3.Right).Normalized();
+            var basisZ = basisX.Cross(basisY).Normalized();
+
+            // The plane position is: point on plane (normal * D) + the collision shape's global position
+            var planePosition = normal * plane.D + globalTransform.Origin;
 
             var planeTransform = new Transform3D(
                 new Basis(basisX, basisY, basisZ),
-                normal * plane.D
+                planePosition
             );
 
             context.AddPrimitive(prim = new vaudio.PlanePrimitive()
@@ -182,12 +190,6 @@ public partial class VercidiumAudio : Node
                 return;
             }
         }
-        else if (shape is SeparationRayShape3D)
-        {
-            // SeparationRayShape3D is used for character movement, not acoustic geometry
-            // Skip silently as it's not meant to be an acoustic surface
-            return;
-        }
         else if (shape is ConcavePolygonShape3D polygon)
         {
             var triangles = ConvertConcavePolygonToVector3FList(polygon, out var min, out var max);
@@ -195,12 +197,6 @@ public partial class VercidiumAudio : Node
 
             prim = new vaudio.MeshPrimitive(material, triangles, min, max, transform, true);
             context.AddPrimitive(prim);
-        }
-        else
-        {
-            // TODO - other primitive types
-            GD.PrintErr($"CollisionShape3D not converted to raytraced primitive: {collisionShape.Name}");
-            return;
         }
 
         Debug.Assert(prim != null);
@@ -318,15 +314,19 @@ public partial class VercidiumAudio : Node
                     var plane = worldBoundary.Plane;
                     var normal = plane.Normal;
 
-                    var basisZ = new Vector3(normal.X, normal.Y, normal.Z);
-                    var basisX = basisZ.Cross(Vector3.Up).Normalized();
+                    // VAudio PlanePrimitive lies in XZ plane at Y=0 in local space, with Y-up as the normal
+                    var basisY = new Vector3(normal.X, normal.Y, normal.Z);
+                    var basisX = basisY.Cross(Vector3.Forward).Normalized();
                     if (basisX.LengthSquared() < 0.001f)
-                        basisX = basisZ.Cross(Vector3.Right).Normalized();
-                    var basisY = basisZ.Cross(basisX).Normalized();
+                        basisX = basisY.Cross(Vector3.Right).Normalized();
+                    var basisZ = basisX.Cross(basisY).Normalized();
+
+                    // The plane position is: point on plane (normal * D) + the collision shape's global position
+                    var planePosition = normal * plane.D + globalTransform.Origin;
 
                     var planeTransform = new Transform3D(
                         new Basis(basisX, basisY, basisZ),
-                        normal * plane.D
+                        planePosition
                     );
 
                     planePrim.transform = ToVAudio(planeTransform);
