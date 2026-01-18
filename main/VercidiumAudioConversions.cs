@@ -186,4 +186,175 @@ public partial class VercidiumAudio : Node
 
         return vertices;
     }
+
+    public static List<vaudio.Vector3F> ConvertConvexPolygonToVector3FList(ConvexPolygonShape3D shape, out vaudio.Vector3F min, out vaudio.Vector3F max)
+    {
+        Vector3[] points = shape.Points;
+
+        if (points.Length < 4)
+        {
+            min = new vaudio.Vector3F(0, 0, 0);
+            max = new vaudio.Vector3F(0, 0, 0);
+            return [];
+        }
+
+        List<vaudio.Vector3F> triangles = [];
+
+        min = vaudio.Vector3F.MAX;
+        max = vaudio.Vector3F.MIN;
+
+        // Compute convex hull triangulation using fan triangulation from centroid
+        // First, compute centroid
+        Vector3 centroid = Vector3.Zero;
+        foreach (var point in points)
+            centroid += point;
+        centroid /= points.Length;
+
+        // Update bounds for all points
+        foreach (var point in points)
+        {
+            min.X = Math.Min(min.X, point.X);
+            min.Y = Math.Min(min.Y, point.Y);
+            min.Z = Math.Min(min.Z, point.Z);
+            max.X = Math.Max(max.X, point.X);
+            max.Y = Math.Max(max.Y, point.Y);
+            max.Z = Math.Max(max.Z, point.Z);
+        }
+
+        // For a convex hull, we need to generate triangles for all faces
+        // Use a simple approach: create triangles from centroid to each edge of the convex hull
+        // This works because the shape is convex
+
+        // For 4 points (tetrahedron), create 4 triangular faces
+        // For more points, we use convex hull face generation
+        if (points.Length == 4)
+        {
+            // Tetrahedron - 4 faces
+            int[][] faces = [[0, 1, 2], [0, 1, 3], [0, 2, 3], [1, 2, 3]];
+            foreach (var face in faces)
+            {
+                var v0 = points[face[0]];
+                var v1 = points[face[1]];
+                var v2 = points[face[2]];
+
+                // Ensure outward-facing normal (away from centroid)
+                var faceCenter = (v0 + v1 + v2) / 3;
+                var normal = (v1 - v0).Cross(v2 - v0);
+                var toCentroid = centroid - faceCenter;
+
+                if (normal.Dot(toCentroid) > 0)
+                    (v1, v2) = (v2, v1); // Flip winding
+
+                triangles.Add(ToVAudio(v0));
+                triangles.Add(ToVAudio(v1));
+                triangles.Add(ToVAudio(v2));
+            }
+        }
+        else
+        {
+            // For general convex polyhedra, use a simple fan triangulation
+            // This creates triangles from the first point to all other edges
+            // Works well for simple convex shapes
+            for (int i = 1; i < points.Length - 1; i++)
+            {
+                var v0 = points[0];
+                var v1 = points[i];
+                var v2 = points[i + 1];
+
+                triangles.Add(ToVAudio(v0));
+                triangles.Add(ToVAudio(v1));
+                triangles.Add(ToVAudio(v2));
+            }
+
+            // Add back face
+            for (int i = 1; i < points.Length - 1; i++)
+            {
+                var v0 = points[0];
+                var v1 = points[i + 1];
+                var v2 = points[i];
+
+                triangles.Add(ToVAudio(v0));
+                triangles.Add(ToVAudio(v1));
+                triangles.Add(ToVAudio(v2));
+            }
+        }
+
+        return triangles;
+    }
+
+    public static List<vaudio.Vector3F> ConvertHeightMapToVector3FList(HeightMapShape3D shape, out vaudio.Vector3F min, out vaudio.Vector3F max)
+    {
+        int mapWidth = shape.MapWidth;
+        int mapDepth = shape.MapDepth;
+        float[] mapData = shape.MapData;
+
+        if (mapWidth < 2 || mapDepth < 2 || mapData.Length < mapWidth * mapDepth)
+        {
+            min = new vaudio.Vector3F(0, 0, 0);
+            max = new vaudio.Vector3F(0, 0, 0);
+            return [];
+        }
+
+        List<vaudio.Vector3F> triangles = [];
+
+        min = vaudio.Vector3F.MAX;
+        max = vaudio.Vector3F.MIN;
+
+        // HeightMapShape3D is centered at origin, spanning from -width/2 to +width/2 and -depth/2 to +depth/2
+        float halfWidth = (mapWidth - 1) / 2.0f;
+        float halfDepth = (mapDepth - 1) / 2.0f;
+
+        // Generate triangles for each grid cell
+        for (int z = 0; z < mapDepth - 1; z++)
+        {
+            for (int x = 0; x < mapWidth - 1; x++)
+            {
+                // Get heights for the 4 corners of this cell
+                float h00 = mapData[z * mapWidth + x];
+                float h10 = mapData[z * mapWidth + (x + 1)];
+                float h01 = mapData[(z + 1) * mapWidth + x];
+                float h11 = mapData[(z + 1) * mapWidth + (x + 1)];
+
+                // Skip cells with NaN heights (holes in the terrain)
+                if (float.IsNaN(h00) || float.IsNaN(h10) || float.IsNaN(h01) || float.IsNaN(h11))
+                    continue;
+
+                // Calculate world positions (centered at origin)
+                Vector3 v00 = new(x - halfWidth, h00, z - halfDepth);
+                Vector3 v10 = new(x + 1 - halfWidth, h10, z - halfDepth);
+                Vector3 v01 = new(x - halfWidth, h01, z + 1 - halfDepth);
+                Vector3 v11 = new(x + 1 - halfWidth, h11, z + 1 - halfDepth);
+
+                // Update bounds
+                foreach (var v in new[] { v00, v10, v01, v11 })
+                {
+                    min.X = Math.Min(min.X, v.X);
+                    min.Y = Math.Min(min.Y, v.Y);
+                    min.Z = Math.Min(min.Z, v.Z);
+                    max.X = Math.Max(max.X, v.X);
+                    max.Y = Math.Max(max.Y, v.Y);
+                    max.Z = Math.Max(max.Z, v.Z);
+                }
+
+                // Create two triangles for this quad (counter-clockwise winding for upward-facing normals)
+                // Triangle 1: v00, v01, v10
+                triangles.Add(ToVAudio(v00));
+                triangles.Add(ToVAudio(v01));
+                triangles.Add(ToVAudio(v10));
+
+                // Triangle 2: v10, v01, v11
+                triangles.Add(ToVAudio(v10));
+                triangles.Add(ToVAudio(v01));
+                triangles.Add(ToVAudio(v11));
+            }
+        }
+
+        if (triangles.Count == 0)
+        {
+            min = new vaudio.Vector3F(0, 0, 0);
+            max = new vaudio.Vector3F(0, 0, 0);
+        }
+
+        return triangles;
+    }
 }

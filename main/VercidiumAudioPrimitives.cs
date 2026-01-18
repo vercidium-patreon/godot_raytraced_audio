@@ -88,14 +88,105 @@ public partial class VercidiumAudio : Node
                 material = material
             });
         }
-        else if (shape is SphereShape3D)
+        else if (shape is SphereShape3D sphere)
         {
             context.AddPrimitive(prim = new vaudio.SpherePrimitive()
             {
                 center = new vaudio.Vector3F(position.X, position.Y, position.Z),
-                radius = scale.X,
+                radius = sphere.Radius * scale.X,
                 material = material
             });
+        }
+        else if (shape is CapsuleShape3D capsule)
+        {
+            // Godot CapsuleShape3D: height is total height including hemispherical caps, radius is the radius
+            // VAudio CapsulePrimitive: length is the cylinder portion (not including caps), radius is the radius
+            // The cylinder length = total height - 2 * radius
+            float cylinderLength = capsule.Height - 2 * capsule.Radius;
+            if (cylinderLength < 0) cylinderLength = 0;
+
+            context.AddPrimitive(prim = new vaudio.CapsulePrimitive()
+            {
+                radius = capsule.Radius * scale.X,
+                length = cylinderLength * scale.Y,
+                transform = ToVAudio(globalTransform),
+                material = material
+            });
+        }
+        else if (shape is CylinderShape3D cylinder)
+        {
+            context.AddPrimitive(prim = new vaudio.CylinderPrimitive()
+            {
+                radius = cylinder.Radius * scale.X,
+                length = cylinder.Height * scale.Y,
+                transform = ToVAudio(globalTransform),
+                material = material
+            });
+        }
+        else if (shape is WorldBoundaryShape3D worldBoundary)
+        {
+            // WorldBoundaryShape3D represents an infinite plane, we approximate with a large plane
+            var plane = worldBoundary.Plane;
+            var normal = plane.Normal;
+
+            // Create a transform that aligns the plane primitive with the world boundary
+            // PlanePrimitive is centered at origin and lies in XY plane by default
+            var basisZ = new Vector3(normal.X, normal.Y, normal.Z);
+            var basisX = basisZ.Cross(Vector3.Up).Normalized();
+            if (basisX.LengthSquared() < 0.001f)
+                basisX = basisZ.Cross(Vector3.Right).Normalized();
+            var basisY = basisZ.Cross(basisX).Normalized();
+
+            var planeTransform = new Transform3D(
+                new Basis(basisX, basisY, basisZ),
+                normal * plane.D
+            );
+
+            context.AddPrimitive(prim = new vaudio.PlanePrimitive()
+            {
+                width = 1000f,  // Large approximation for infinite plane
+                height = 1000f,
+                transform = ToVAudio(planeTransform),
+                material = material
+            });
+        }
+        else if (shape is ConvexPolygonShape3D convexPolygon)
+        {
+            var triangles = ConvertConvexPolygonToVector3FList(convexPolygon, out var min, out var max);
+            var transform = ToVAudio(globalTransform);
+
+            if (triangles.Count > 0)
+            {
+                prim = new vaudio.MeshPrimitive(material, triangles, min, max, transform, true);
+                context.AddPrimitive(prim);
+            }
+            else
+            {
+                GD.PrintErr($"ConvexPolygonShape3D '{collisionShape.Name}' has no valid triangles");
+                return;
+            }
+        }
+        else if (shape is HeightMapShape3D heightMap)
+        {
+            var triangles = ConvertHeightMapToVector3FList(heightMap, out var min, out var max);
+            var transform = ToVAudio(globalTransform);
+
+            if (triangles.Count > 0)
+            {
+                prim = new vaudio.MeshPrimitive(material, triangles, min, max, transform, true);
+                context.AddPrimitive(prim);
+            }
+            else
+            {
+                GD.PrintErr($"HeightMapShape3D '{collisionShape.Name}' has no valid triangles");
+                return;
+            }
+        }
+        else if (shape is SeparationRayShape3D)
+        {
+            // SeparationRayShape3D is used for character movement, not acoustic geometry
+            // Skip silently as it's not meant to be an acoustic surface
+            return;
         }
         else if (shape is ConcavePolygonShape3D polygon)
         {
@@ -191,7 +282,7 @@ public partial class VercidiumAudio : Node
                 else if (primitive is vaudio.SpherePrimitive sphere)
                 {
                     sphere.center = ToVAudio(globalTransform.Origin);
-                    sphere.radius = collisionShape.Scale.X;
+                    sphere.radius = sphere.radius * collisionShape.Scale.X;
                 }
                 else if (primitive is vaudio.PrismPrimitive prism)
                 {
@@ -199,6 +290,46 @@ public partial class VercidiumAudio : Node
 
                     prism.size = ToVAudio(box.Size);
                     prism.transform = ToVAudio(globalTransform);
+                }
+                else if (primitive is vaudio.CapsulePrimitive capsulePrim)
+                {
+                    var capsule = collisionShape.Shape as CapsuleShape3D;
+                    var scale = collisionShape.Scale;
+
+                    float cylinderLength = capsule.Height - 2 * capsule.Radius;
+                    if (cylinderLength < 0) cylinderLength = 0;
+
+                    capsulePrim.radius = capsule.Radius * scale.X;
+                    capsulePrim.length = cylinderLength * scale.Y;
+                    capsulePrim.transform = ToVAudio(globalTransform);
+                }
+                else if (primitive is vaudio.CylinderPrimitive cylinderPrim)
+                {
+                    var cylinder = collisionShape.Shape as CylinderShape3D;
+                    var scale = collisionShape.Scale;
+
+                    cylinderPrim.radius = cylinder.Radius * scale.X;
+                    cylinderPrim.length = cylinder.Height * scale.Y;
+                    cylinderPrim.transform = ToVAudio(globalTransform);
+                }
+                else if (primitive is vaudio.PlanePrimitive planePrim)
+                {
+                    var worldBoundary = collisionShape.Shape as WorldBoundaryShape3D;
+                    var plane = worldBoundary.Plane;
+                    var normal = plane.Normal;
+
+                    var basisZ = new Vector3(normal.X, normal.Y, normal.Z);
+                    var basisX = basisZ.Cross(Vector3.Up).Normalized();
+                    if (basisX.LengthSquared() < 0.001f)
+                        basisX = basisZ.Cross(Vector3.Right).Normalized();
+                    var basisY = basisZ.Cross(basisX).Normalized();
+
+                    var planeTransform = new Transform3D(
+                        new Basis(basisX, basisY, basisZ),
+                        normal * plane.D
+                    );
+
+                    planePrim.transform = ToVAudio(planeTransform);
                 }
             }
             else if (node is MeshInstance3D meshInstance && meshInstance.HasMeta(PRIMITIVE_META_KEY))
