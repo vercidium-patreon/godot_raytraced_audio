@@ -189,97 +189,17 @@ public partial class VercidiumAudio : Node
 
     public static List<vaudio.Vector3F> ConvertConvexPolygonToVector3FList(ConvexPolygonShape3D shape, out vaudio.Vector3F min, out vaudio.Vector3F max)
     {
-        Vector3[] points = shape.Points;
+        // Use Godot's built-in debug mesh which properly triangulates the convex hull
+        var debugMesh = shape.GetDebugMesh();
 
-        if (points.Length < 4)
+        if (debugMesh == null)
         {
             min = new vaudio.Vector3F(0, 0, 0);
             max = new vaudio.Vector3F(0, 0, 0);
             return [];
         }
 
-        List<vaudio.Vector3F> triangles = [];
-
-        min = vaudio.Vector3F.MAX;
-        max = vaudio.Vector3F.MIN;
-
-        // Compute convex hull triangulation using fan triangulation from centroid
-        // First, compute centroid
-        Vector3 centroid = Vector3.Zero;
-        foreach (var point in points)
-            centroid += point;
-        centroid /= points.Length;
-
-        // Update bounds for all points
-        foreach (var point in points)
-        {
-            min.X = Math.Min(min.X, point.X);
-            min.Y = Math.Min(min.Y, point.Y);
-            min.Z = Math.Min(min.Z, point.Z);
-            max.X = Math.Max(max.X, point.X);
-            max.Y = Math.Max(max.Y, point.Y);
-            max.Z = Math.Max(max.Z, point.Z);
-        }
-
-        // For a convex hull, we need to generate triangles for all faces
-        // Use a simple approach: create triangles from centroid to each edge of the convex hull
-        // This works because the shape is convex
-
-        // For 4 points (tetrahedron), create 4 triangular faces
-        // For more points, we use convex hull face generation
-        if (points.Length == 4)
-        {
-            // Tetrahedron - 4 faces
-            int[][] faces = [[0, 1, 2], [0, 1, 3], [0, 2, 3], [1, 2, 3]];
-            foreach (var face in faces)
-            {
-                var v0 = points[face[0]];
-                var v1 = points[face[1]];
-                var v2 = points[face[2]];
-
-                // Ensure outward-facing normal (away from centroid)
-                var faceCenter = (v0 + v1 + v2) / 3;
-                var normal = (v1 - v0).Cross(v2 - v0);
-                var toCentroid = centroid - faceCenter;
-
-                if (normal.Dot(toCentroid) > 0)
-                    (v1, v2) = (v2, v1); // Flip winding
-
-                triangles.Add(ToVAudio(v0));
-                triangles.Add(ToVAudio(v1));
-                triangles.Add(ToVAudio(v2));
-            }
-        }
-        else
-        {
-            // For general convex polyhedra, use a simple fan triangulation
-            // This creates triangles from the first point to all other edges
-            // Works well for simple convex shapes
-            for (int i = 1; i < points.Length - 1; i++)
-            {
-                var v0 = points[0];
-                var v1 = points[i];
-                var v2 = points[i + 1];
-
-                triangles.Add(ToVAudio(v0));
-                triangles.Add(ToVAudio(v1));
-                triangles.Add(ToVAudio(v2));
-            }
-
-            // Add back face
-            for (int i = 1; i < points.Length - 1; i++)
-            {
-                var v0 = points[0];
-                var v1 = points[i + 1];
-                var v2 = points[i];
-
-                triangles.Add(ToVAudio(v0));
-                triangles.Add(ToVAudio(v1));
-                triangles.Add(ToVAudio(v2));
-            }
-        }
-
-        return triangles;
+        return ConvertMeshToVector3FList(debugMesh, out min, out max);
     }
 
     public static List<vaudio.Vector3F> ConvertHeightMapToVector3FList(HeightMapShape3D shape, out vaudio.Vector3F min, out vaudio.Vector3F max)

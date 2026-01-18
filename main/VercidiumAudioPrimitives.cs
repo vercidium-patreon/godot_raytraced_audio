@@ -20,6 +20,8 @@ public partial class VercidiumAudio : Node
             CreateVAudioPrimitive(csgSphere, material);
         else if (node is CsgPolygon3D csgPolygon)
             CreateVAudioPrimitive(csgPolygon, material);
+        else if (node is CsgMesh3D csgMesh)
+            CreateVAudioPrimitive(csgMesh, material);
         else if (node is CollisionShape3D collisionShape)
             CreateVAudioPrimitive(collisionShape, material);
         else if (node is MeshInstance3D meshInstance)
@@ -176,6 +178,42 @@ public partial class VercidiumAudio : Node
         context.AddPrimitive(prim);
 
         csgPolygon.SetMeta(PRIMITIVE_META_KEY, new VercidiumAudioPrimitiveRef { Primitive = prim });
+    }
+
+    void CreateVAudioPrimitive(CsgMesh3D csgMesh, vaudio.MaterialType material)
+    {
+        Debug.Assert(material != vaudio.MaterialType.Air);
+
+        // Skip if it's already been added to the raytracing scene
+        if (csgMesh.HasMeta(PRIMITIVE_META_KEY))
+        {
+            Debug.Assert(false);
+            return;
+        }
+
+        // CsgMesh3D has a Mesh property that can be used directly
+        var mesh = csgMesh.Mesh;
+        if (mesh == null)
+        {
+            GD.PrintErr($"CsgMesh3D '{csgMesh.Name}' has no mesh assigned");
+            return;
+        }
+
+        var triangles = ConvertMeshToVector3FList(mesh, out var min, out var max);
+
+        if (triangles.Count == 0)
+        {
+            GD.PrintErr($"CsgMesh3D '{csgMesh.Name}' has no triangles");
+            return;
+        }
+
+        var transform = ToVAudio(csgMesh.GlobalTransform);
+
+        vaudio.MeshPrimitive prim = new(material, triangles, min, max, transform, true);
+
+        context.AddPrimitive(prim);
+
+        csgMesh.SetMeta(PRIMITIVE_META_KEY, new VercidiumAudioPrimitiveRef { Primitive = prim });
     }
 
     void CreateVAudioPrimitive(CollisionShape3D collisionShape, vaudio.MaterialType material)
@@ -413,6 +451,13 @@ public partial class VercidiumAudio : Node
                 if (primitive is vaudio.MeshPrimitive meshPrim)
                 {
                     meshPrim.transform = ToVAudio(csgPolygon.GlobalTransform);
+                }
+            }
+            else if (node is CsgMesh3D csgMesh && csgMesh.HasMeta(PRIMITIVE_META_KEY))
+            {
+                if (primitive is vaudio.MeshPrimitive meshPrim)
+                {
+                    meshPrim.transform = ToVAudio(csgMesh.GlobalTransform);
                 }
             }
             else if (node is CollisionShape3D collisionShape && collisionShape.HasMeta(PRIMITIVE_META_KEY))
