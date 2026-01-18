@@ -20,27 +20,23 @@ public partial class VercidiumAudio : Node
                 // Validate material ID
                 if (material.MaterialId < 1000)
                 {
-                    GD.PrintErr($"Custom material '{material.MaterialName}' has invalid ID {material.MaterialId}. Must be >= 1000. Skipping.");
+                    GD.PushError($"godot_raytraced_audio: custom material {material.MaterialName} has an invalid ID: {material.MaterialId}");
                     continue;
                 }
 
-                if (customMaterials.ContainsKey(material.MaterialId))
+                if (customMaterials.TryGetValue(material.MaterialId, out var existingMaterial))
                 {
-                    GD.PrintErr($"Duplicate material ID {material.MaterialId} for '{material.MaterialName}'. Skipping.");
+                    GD.PushError($"godot_raytraced_audio: custom material {material.MaterialName} has a duplicate material ID: {material.MaterialId} which is already used by the {existingMaterial.Name} material");
                     continue;
                 }
 
-                // Register with VAudio context settings
                 var materialType = (vaudio.MaterialType)material.MaterialId;
-                settings.materials.properties[materialType] = material.CreateProperties();
-
                 var rgb = material.GetDebugColorRGB();
+
+                settings.materials.properties[materialType] = material.CreateProperties();
                 settings.materials.colors[materialType] = new(rgb.r, rgb.g, rgb.b);
 
-                // Store in registry
                 customMaterials[material.MaterialId] = material;
-
-                GD.Print($"Registered custom material: '{material.MaterialName}' (ID: {material.MaterialId})");
             }
         }
     }
@@ -79,10 +75,10 @@ public partial class VercidiumAudio : Node
             throw new InvalidOperationException("Cannot register a null material");
 
         if (material.MaterialId < 1000)
-            throw new InvalidOperationException($"Custom material '{material.MaterialName}' has invalid ID {material.MaterialId}. Must be >= 1000.");
+            throw new InvalidOperationException($"Custom material {material.MaterialName} has an invalid ID: {material.MaterialId}. Must be >= 1000");
 
         if (customMaterials.TryGetValue(material.MaterialId, out var existingMaterial))
-            throw new InvalidOperationException($"Material ID {material.MaterialId} is already used by the {existingMaterial.Name} material.");
+            throw new InvalidOperationException($"Custom material {material.MaterialName} has a duplicate ID: {material.MaterialId} which is already used by the {existingMaterial.Name} material");
 
         // Register with active context
         var materialType = (vaudio.MaterialType)material.MaterialId;
@@ -97,8 +93,6 @@ public partial class VercidiumAudio : Node
         contextMaterial.TransmissionHF = material.TransmissionHF;
 
         customMaterials[material.MaterialId] = material;
-
-        GD.Print($"Custom material registered: '{material.MaterialName}' (ID: {material.MaterialId})");
     }
 
     /// <summary>
@@ -124,7 +118,7 @@ public partial class VercidiumAudio : Node
             if (DefaultMaterialDict.TryGetValue(materialString, out var type))
                 return type;
 
-            GD.PrintErr($"Unknown material string for {node.Name}: {materialString}, defaulting to Air");
+            GD.PushWarning($"godot_raytraced_audio: unknown material string for {node.Name}: {materialString}. Defaulting to 'air'");
         }
 
         return vaudio.MaterialType.Air;
