@@ -7,7 +7,7 @@ namespace godot_raytraced_audio;
 public partial class VercidiumAudioSourceAmbient : ALSource3D
 {
     private VercidiumAudio vercidiumAudio;
-    private bool _played = false;
+    private bool played = false;
 
     public override void _EnterTree()
     {
@@ -17,14 +17,25 @@ public partial class VercidiumAudioSourceAmbient : ALSource3D
         vercidiumAudio = this.GetVercidiumAudioParent();
     }
 
+    public override void _Ready()
+    {
+        if (Engine.IsEditorHint())
+            return;
+
+        // Register for device recreated callback to re-play sounds
+        ALManager.instance.RegisterDeviceRecreatedCallback(OnDeviceRecreated);
+
+        base._Ready();
+    }
+
     public override bool Play()
     {
         // Don't play until we've raytraced once
         if (vercidiumAudio?.ambientFilter == null)
             return false;
 
-        _played = base.Play();
-        return _played;
+        played = base.Play();
+        return played;
     }
 
     public override void _Process(double delta)
@@ -39,9 +50,32 @@ public partial class VercidiumAudioSourceAmbient : ALSource3D
         effect = vercidiumAudio.listenerReverbEffect;
         UpdateFilter(vercidiumAudio.ambientFilter.gain, vercidiumAudio.ambientFilter.gainHF);
 
-        if (!_played)
+        if (!played)
         {
-            _played = Play();
+            played = Play();
         }
+    }
+
+    void OnDeviceRecreated()
+    {
+        // Re-play if we were playing before the device was destroyed
+        if (_wasPlayingBeforeDeviceDestroyed)
+        {
+            _wasPlayingBeforeDeviceDestroyed = false;
+            Play();
+        }
+    }
+
+    bool _wasPlayingBeforeDeviceDestroyed;
+
+    public override void OnDeviceDestroyed()
+    {
+        // Track if we were playing so we can re-play after device recreation
+        _wasPlayingBeforeDeviceDestroyed = played && Looping;
+
+        // Reset played state since sources are being destroyed
+        played = false;
+
+        base.OnDeviceDestroyed();
     }
 }

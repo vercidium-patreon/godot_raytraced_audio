@@ -1,4 +1,5 @@
 using System.Linq;
+using godot_openal;
 
 namespace godot_raytraced_audio;
 
@@ -47,12 +48,40 @@ public partial class VercidiumAudio : Node
 
         context = new(settings);
 
-        listenerReverbEffect = new();
+        // Create reverb effects
+        OnDeviceRecreated();
+
+        // Register for device destroyed/recreated callbacks to clean up and recreate reverb effects
+        ALManager.instance.RegisterDeviceDestroyedCallback(OnDeviceDestroyed);
+        ALManager.instance.RegisterDeviceRecreatedCallback(OnDeviceRecreated);
 
         // Wait a frame for the scene to be fully loaded
         CallDeferred(nameof(InitializeScene));
-        
+
         GD.Print("[godot_raytraced_audio] Ready");
+    }
+
+    void OnDeviceDestroyed()
+    {
+        // Delete all reverb effects - they contain OpenAL resources that are now invalid
+        ambientFilter?.Delete();
+        ambientFilter = null;
+
+        listenerReverbEffect?.Dispose();
+        listenerReverbEffect = null;
+
+        foreach (var effect in groupedReverbEffects)
+            effect.Dispose();
+
+        groupedReverbEffects.Clear();
+    }
+
+    void OnDeviceRecreated()
+    {
+        // Recreate the reverb effects after the device is recreated
+        listenerReverbEffect = new();
+
+        // Don't create ambientFilter, as we need raytracing to complete first
     }
 
     void InitializeScene()
@@ -69,6 +98,10 @@ public partial class VercidiumAudio : Node
     {
         if (Engine.IsEditorHint())
             return;
+
+        // Unregister the device destroyed/recreated callbacks
+        ALManager.instance.UnregisterDeviceDestroyedCallback(OnDeviceDestroyed);
+        ALManager.instance.UnregisterDeviceRecreatedCallback(OnDeviceRecreated);
 
         GetTree().NodeAdded -= OnNodeAdded;
         GetTree().NodeRemoved -= OnNodeRemoved;

@@ -12,6 +12,7 @@ public partial class VercidiumAudioSource : ALSource3D
     public bool Raytraced => voice != null && !voice.initialising;
 
     private bool _playWhenRaytracingCompletes = false;
+    private bool _wasPlayingBeforeDeviceDestroyed = false;
 
     [Export]
     public bool PlayWhenRaytracingCompletes
@@ -30,13 +31,26 @@ public partial class VercidiumAudioSource : ALSource3D
         if (Engine.IsEditorHint())
             return;
 
+        // Register for device recreated callback to re-play sounds
+        ALManager.instance.RegisterDeviceRecreatedCallback(OnDeviceRecreated);
+
         // Must create the voice after the parent VercidiumAudio node is initialised
         CallDeferred("CreateVoice");
     }
 
     public void CreateVoice()
-    { 
+    {
         voice = vercidiumAudio.AttachVoice(this, OnRaytracingComplete);
+    }
+
+    void OnDeviceRecreated()
+    {
+        // Re-play if we were playing before the device was destroyed
+        if (_wasPlayingBeforeDeviceDestroyed)
+        {
+            _wasPlayingBeforeDeviceDestroyed = false;
+            Play();
+        }
     }
 
     void OnRaytracingComplete()
@@ -82,8 +96,28 @@ public partial class VercidiumAudioSource : ALSource3D
         UpdateFilter(voice.filter.gainLF, voice.filter.gainHF);
     }
 
+    public override void OnDeviceDestroyed()
+    {
+        // Track if we were playing so we can re-play after device recreation
+        _wasPlayingBeforeDeviceDestroyed = played && Looping;
+
+        // Reset played state since sources are being destroyed
+        played = false;
+
+        base.OnDeviceDestroyed();
+    }
+
     public override void _ExitTree()
     {
+        if (Engine.IsEditorHint())
+        {
+            base._ExitTree();
+            return;
+        }
+
+        // Unregister the device recreated callback
+        ALManager.instance.UnregisterDeviceRecreatedCallback(OnDeviceRecreated);
+
         if (voice != null)
             vercidiumAudio?.DetachVoice(this, voice);
 
