@@ -1,3 +1,5 @@
+using System.Linq;
+
 namespace godot_raytraced_audio;
 
 public partial class VercidiumAudio : Node
@@ -16,6 +18,13 @@ public partial class VercidiumAudio : Node
         if (Engine.IsEditorHint())
             return;
 
+        // Log to both - in case we're launched from vs2026 or from the Godot Editor
+        Action<string> logCallback = (s) =>
+        {
+            Console.WriteLine(s);
+            GD.Print(s);
+        };
+
         var settings = new vaudio.RaytracingContextSettings()
         {
             worldPosition = new(WorldPosition.X, WorldPosition.Y, WorldPosition.Z),
@@ -29,7 +38,7 @@ public partial class VercidiumAudio : Node
             maximumGroupedEAXCount = MaximumGroupedEAXCount,
             voiceReverbRayCount = VoiceReverbRayCount,
             voiceReverbBounceCount = VoiceReverbBounceCount,
-            logCallback = GD.Print,
+            logCallback = logCallback,
             onReverbUpdated = UpdateGodotReverb
         };
 
@@ -43,7 +52,7 @@ public partial class VercidiumAudio : Node
         // Wait a frame for the scene to be fully loaded
         CallDeferred(nameof(InitializeScene));
         
-        GD.Print("godot_raytraced_audio: ready");
+        GD.Print("[godot_raytraced_audio] Ready");
     }
 
     void InitializeScene()
