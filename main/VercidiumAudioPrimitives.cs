@@ -462,7 +462,7 @@ public partial class VercidiumAudio : Node
                 else if (primitive is vaudio.SpherePrimitive sphere)
                 {
                     sphere.center = ToVAudio(globalTransform.Origin);
-                    sphere.radius = sphere.radius * collisionShape.Scale.X;
+                    sphere.radius = (collisionShape.Shape as SphereShape3D).Radius * collisionShape.Scale.X;
                 }
                 else if (primitive is vaudio.PrismPrimitive prism)
                 {
