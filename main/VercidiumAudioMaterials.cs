@@ -20,13 +20,13 @@ public partial class VercidiumAudio : Node
                 // Validate material ID
                 if (material.MaterialId < 1000)
                 {
-                    GD.PushError($"godot_raytraced_audio: custom material {material.MaterialName} has an invalid ID: {material.MaterialId}");
+                    LogError($"Custom material {material.MaterialName} has an invalid ID: {material.MaterialId}");
                     continue;
                 }
 
                 if (customMaterials.TryGetValue(material.MaterialId, out var existingMaterial))
                 {
-                    GD.PushError($"godot_raytraced_audio: custom material {material.MaterialName} has a duplicate material ID: {material.MaterialId} which is already used by the {existingMaterial.Name} material");
+                    LogError($"custom material {material.MaterialName} has a duplicate material ID: {material.MaterialId} which is already used by the {existingMaterial.Name} material");
                     continue;
                 }
 
@@ -118,7 +118,7 @@ public partial class VercidiumAudio : Node
             if (DefaultMaterialDict.TryGetValue(materialString, out var type))
                 return type;
 
-            GD.PushWarning($"godot_raytraced_audio: unknown material string for {node.Name}: {materialString}. Defaulting to 'air'");
+            LogWarning($"Unknown material string for node {node.Name}: {materialString}. Defaulting to 'air'");
         }
 
         return vaudio.MaterialType.Air;

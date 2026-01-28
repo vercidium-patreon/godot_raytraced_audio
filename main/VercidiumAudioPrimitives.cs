@@ -4,7 +4,7 @@ namespace godot_raytraced_audio;
 
 public partial class VercidiumAudio : Node
 {
-    void CollectPrimitivesRecursive(Node node, vaudio.MaterialType material)
+    void AddPrimitive(Node node, vaudio.MaterialType material, bool recursive)
     {
         // Use this specific material rather than the parent material
         if (node.HasMeta(MATERIAL_META_KEY))
@@ -29,17 +29,25 @@ public partial class VercidiumAudio : Node
         else if (node is MeshInstance3D meshInstance)
             CreateVAudioPrimitive(meshInstance, material);
 
-        foreach (Node child in node.GetChildren())
-            CollectPrimitivesRecursive(child, material);
+        if (recursive)
+            foreach (Node child in node.GetChildren())
+                AddPrimitive(child, material, true);
     }
 
-    static void ForgetPrimitivesRecursive(Node node)
+    void RemovePrimitive(Node node, bool recursive)
     {
+        // When a node is removed from the scene, remove it from the raytracing simulation too
         if (node.HasMeta(PRIMITIVE_META_KEY))
-            node.RemoveMeta(PRIMITIVE_META_KEY);
+        {
+            var primitive = node.GetMeta(PRIMITIVE_META_KEY).As<VercidiumAudioPrimitiveRef>();
+            context.RemovePrimitive(primitive.Primitive);
 
-        foreach (Node child in node.GetChildren())
-            ForgetPrimitivesRecursive(child);
+            node.RemoveMeta(PRIMITIVE_META_KEY);
+        }
+
+        if (recursive)
+            foreach (Node child in node.GetChildren())
+                RemovePrimitive(child, true);
     }
 
     void CreateVAudioPrimitive(CsgBox3D csgBox, vaudio.MaterialType material)
@@ -153,7 +161,7 @@ public partial class VercidiumAudio : Node
         var meshes = csgPolygon.GetMeshes();
         if (meshes == null || meshes.Count < 2)
         {
-            GD.PushWarning($"godot_raytraced_audio: CsgPolygon3D {csgPolygon.Name} will not affect rayracing as it has no mesh");
+            LogWarning($"CsgPolygon3D {csgPolygon.Name} will not affect rayracing as it has no mesh");
             return;
         }
 
@@ -161,7 +169,7 @@ public partial class VercidiumAudio : Node
         var mesh = meshes[1].As<Mesh>();
         if (mesh == null)
         {
-            GD.PushWarning($"godot_raytraced_audio: CsgPolygon3D {csgPolygon.Name} will not affect rayracing as it's mesh is invalid");
+            LogWarning($"CsgPolygon3D {csgPolygon.Name} will not affect rayracing as it's mesh is invalid");
             return;
         }
 
@@ -194,7 +202,7 @@ public partial class VercidiumAudio : Node
         var mesh = csgMesh.Mesh;
         if (mesh == null)
         {
-            GD.PushWarning($"godot_raytraced_audio: CsgMesh3D {csgMesh.Name} will not affect rayracing as it has no mesh");
+            LogWarning($"CsgMesh3D {csgMesh.Name} will not affect rayracing as it has no mesh");
             return;
         }
 
@@ -367,7 +375,7 @@ public partial class VercidiumAudio : Node
         var mesh = meshInstance.Mesh;
         if (mesh == null)
         {
-            GD.PushWarning($"godot_raytraced_audio: MeshInstance3D {meshInstance.Name} will not affect rayracing as it has no mesh");
+            LogWarning($"MeshInstance3D {meshInstance.Name} will not affect rayracing as it has no mesh");
             return;
         }
 
@@ -398,7 +406,7 @@ public partial class VercidiumAudio : Node
             var wrapper = node.GetMeta(PRIMITIVE_META_KEY).As<VercidiumAudioPrimitiveRef>();
             var primitive = wrapper.Primitive;
 
-            if (node is CsgBox3D csgBox && csgBox.HasMeta(PRIMITIVE_META_KEY))
+            if (node is CsgBox3D csgBox)
             {
                 var globalTransform = csgBox.GlobalTransform;
 
@@ -408,7 +416,7 @@ public partial class VercidiumAudio : Node
                     prism.transform = ToVAudio(globalTransform);
                 }
             }
-            else if (node is CsgCylinder3D csgCylinder && csgCylinder.HasMeta(PRIMITIVE_META_KEY))
+            else if (node is CsgCylinder3D csgCylinder)
             {
                 if (primitive is vaudio.CylinderPrimitive cylinderPrim)
                 {
@@ -428,7 +436,7 @@ public partial class VercidiumAudio : Node
                     conePrim.transform = ToVAudio(offsetTransform);
                 }
             }
-            else if (node is CsgSphere3D csgSphere && csgSphere.HasMeta(PRIMITIVE_META_KEY))
+            else if (node is CsgSphere3D csgSphere)
             {
                 if (primitive is vaudio.SpherePrimitive spherePrim)
                 {
@@ -436,21 +444,21 @@ public partial class VercidiumAudio : Node
                     spherePrim.radius = csgSphere.Radius;
                 }
             }
-            else if (node is CsgPolygon3D csgPolygon && csgPolygon.HasMeta(PRIMITIVE_META_KEY))
+            else if (node is CsgPolygon3D csgPolygon)
             {
                 if (primitive is vaudio.MeshPrimitive meshPrim)
                 {
                     meshPrim.transform = ToVAudio(csgPolygon.GlobalTransform);
                 }
             }
-            else if (node is CsgMesh3D csgMesh && csgMesh.HasMeta(PRIMITIVE_META_KEY))
+            else if (node is CsgMesh3D csgMesh)
             {
                 if (primitive is vaudio.MeshPrimitive meshPrim)
                 {
                     meshPrim.transform = ToVAudio(csgMesh.GlobalTransform);
                 }
             }
-            else if (node is CollisionShape3D collisionShape && collisionShape.HasMeta(PRIMITIVE_META_KEY))
+            else if (node is CollisionShape3D collisionShape)
             {
                 var globalTransform = collisionShape.GlobalTransform;
 
@@ -462,7 +470,7 @@ public partial class VercidiumAudio : Node
                 else if (primitive is vaudio.SpherePrimitive sphere)
                 {
                     sphere.center = ToVAudio(globalTransform.Origin);
-                    sphere.radius = sphere.radius * collisionShape.Scale.X;
+                    sphere.radius = (collisionShape.Shape as SphereShape3D).Radius * collisionShape.Scale.X;
                 }
                 else if (primitive is vaudio.PrismPrimitive prism)
                 {
@@ -516,7 +524,7 @@ public partial class VercidiumAudio : Node
                     planePrim.transform = ToVAudio(planeTransform);
                 }
             }
-            else if (node is MeshInstance3D meshInstance && meshInstance.HasMeta(PRIMITIVE_META_KEY))
+            else if (node is MeshInstance3D meshInstance)
             {
                 var globalTransform = meshInstance.GlobalTransform;
 

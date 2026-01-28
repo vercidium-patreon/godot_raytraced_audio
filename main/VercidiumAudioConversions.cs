@@ -129,7 +129,7 @@ public partial class VercidiumAudio : Node
             min = vaudio.Vector3F.Zero;
             max = vaudio.Vector3F.Zero;
 
-            GD.PushWarning($"godot_raytraced_audio: Mesh {name} will not affect raytracing as it has no vertices");
+            LogWarning($"Mesh {name} will not affect raytracing as it has no vertices");
         }
 
         minOut = min;
@@ -147,7 +147,7 @@ public partial class VercidiumAudio : Node
             min = new vaudio.Vector3F(0, 0, 0);
             max = new vaudio.Vector3F(0, 0, 0);
 
-            GD.PushWarning($"godot_raytraced_audio: ConcavePolygonShape3D {name} will not affect raytracing as it has no faces");
+            LogWarning($"ConcavePolygonShape3D {name} will not affect raytracing as it has no faces");
             return [];
         }
 
@@ -185,7 +185,7 @@ public partial class VercidiumAudio : Node
             min = new vaudio.Vector3F(0, 0, 0);
             max = new vaudio.Vector3F(0, 0, 0);
 
-            GD.PushWarning($"godot_raytraced_audio: ConvexPolygonShape3D {name} will not affect raytracing as it cannot be triangulated");
+            LogWarning($"ConvexPolygonShape3D {name} will not affect raytracing as it cannot be triangulated");
             return [];
         }
 
@@ -204,7 +204,7 @@ public partial class VercidiumAudio : Node
             min = new vaudio.Vector3F(0, 0, 0);
             max = new vaudio.Vector3F(0, 0, 0);
 
-            GD.PushWarning($"godot_raytraced_audio: HeightMapShape3D {name} will not affect raytracing as its dimensions are less than 2x2");
+            LogWarning($"HeightMapShape3D {name} will not affect raytracing as its dimensions are less than 2x2");
             return [];
         }
 
