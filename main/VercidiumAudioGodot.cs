@@ -96,7 +96,7 @@ public partial class VercidiumAudio : Node
     void InitializeScene()
     {
         foreach (Node child in SceneRoot.GetChildren())
-            CollectPrimitivesRecursive(child, vaudio.MaterialType.Air);
+            AddPrimitive(child, vaudio.MaterialType.Air, true);
 
         // Listen for scene tree changes
         GetTree().NodeAdded += OnNodeAdded;
@@ -116,19 +116,23 @@ public partial class VercidiumAudio : Node
         GetTree().NodeRemoved -= OnNodeRemoved;
 
         // Remove vercidium_audio_* metadata fields from all nodes in the scene
-        ForgetPrimitivesRecursive(SceneRoot);
+        RemovePrimitive(SceneRoot, true);
 
         context?.Dispose();
     }
 
+    // This fires for the new parent node AND each of its child nodes separately
+    //  Parent node is invoked first
     void OnNodeAdded(Node node)
     {
-        CollectPrimitivesRecursive(node, vaudio.MaterialType.Air); 
+        AddPrimitive(node, vaudio.MaterialType.Air, false); 
     }
 
+    // This fires for the new parent node AND each of its child nodes separately
+    //  Child nodes are invoked first
     void OnNodeRemoved(Node node)
     {
-        ForgetPrimitivesRecursive(node);
+        RemovePrimitive(node, false);
     }
 
     public override void _Process(double delta)

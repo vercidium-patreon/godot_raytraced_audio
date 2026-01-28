@@ -4,7 +4,7 @@ namespace godot_raytraced_audio;
 
 public partial class VercidiumAudio : Node
 {
-    void CollectPrimitivesRecursive(Node node, vaudio.MaterialType material)
+    void AddPrimitive(Node node, vaudio.MaterialType material, bool recursive)
     {
         // Use this specific material rather than the parent material
         if (node.HasMeta(MATERIAL_META_KEY))
@@ -29,11 +29,12 @@ public partial class VercidiumAudio : Node
         else if (node is MeshInstance3D meshInstance)
             CreateVAudioPrimitive(meshInstance, material);
 
-        foreach (Node child in node.GetChildren())
-            CollectPrimitivesRecursive(child, material);
+        if (recursive)
+            foreach (Node child in node.GetChildren())
+                AddPrimitive(child, material, true);
     }
 
-    void ForgetPrimitivesRecursive(Node node)
+    void RemovePrimitive(Node node, bool recursive)
     {
         // When a node is removed from the scene, remove it from the raytracing simulation too
         if (node.HasMeta(PRIMITIVE_META_KEY))
@@ -44,8 +45,9 @@ public partial class VercidiumAudio : Node
             node.RemoveMeta(PRIMITIVE_META_KEY);
         }
 
-        foreach (Node child in node.GetChildren())
-            ForgetPrimitivesRecursive(child);
+        if (recursive)
+            foreach (Node child in node.GetChildren())
+                RemovePrimitive(child, true);
     }
 
     void CreateVAudioPrimitive(CsgBox3D csgBox, vaudio.MaterialType material)
