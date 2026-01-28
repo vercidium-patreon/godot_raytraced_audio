@@ -14,6 +14,15 @@ public partial class VercidiumAudio : Node
         SceneRoot = GetTree().CurrentScene as Node3D;
     }
 
+    // Log to both - in case we're launched from vs2026 or from the Godot Editor
+    static Action<string> Log = (message) =>
+    {
+        var prefixed = $"[godot_raytraced_audio] {message}";
+
+        Console.WriteLine(prefixed);
+        GD.Print(prefixed);
+    };
+
     public override void _Ready()
     {
         if (Engine.IsEditorHint())
@@ -39,7 +48,7 @@ public partial class VercidiumAudio : Node
             maximumGroupedEAXCount = MaximumGroupedEAXCount,
             voiceReverbRayCount = VoiceReverbRayCount,
             voiceReverbBounceCount = VoiceReverbBounceCount,
-            logCallback = logCallback,
+            logCallback = Log,
             onReverbUpdated = UpdateGodotReverb
         };
 
@@ -58,7 +67,7 @@ public partial class VercidiumAudio : Node
         // Wait a frame for the scene to be fully loaded
         CallDeferred(nameof(InitializeScene));
 
-        GD.Print("[godot_raytraced_audio] Ready");
+        Log("Ready");
     }
 
     void OnDeviceDestroyed()
@@ -81,7 +90,7 @@ public partial class VercidiumAudio : Node
         // Recreate the reverb effects after the device is recreated
         listenerReverbEffect = new();
 
-        // Don't create ambientFilter, as we need raytracing to complete first
+        // Don't create ambientFilter here, as we need raytracing to complete first
     }
 
     void InitializeScene()
@@ -114,37 +123,12 @@ public partial class VercidiumAudio : Node
 
     void OnNodeAdded(Node node)
     {
-        var material = vaudio.MaterialType.Air;
-
-        if (node.HasMeta(MATERIAL_META_KEY))
-            material = GetMaterial(node);
-
-        if (node is CsgBox3D csgBox)
-        {
-            CreateVAudioPrimitive(csgBox, material);
-        }
-        else if (node is CollisionShape3D collisionShape)
-        {
-            CreateVAudioPrimitive(collisionShape, material);
-        }
-        else if (node is MeshInstance3D meshInstance)
-        {
-            CreateVAudioPrimitive(meshInstance, material);
-        }
-        else
-        {
-            // TODO - support all 3D object types
-        }
+        CollectPrimitivesRecursive(node, vaudio.MaterialType.Air); 
     }
 
     void OnNodeRemoved(Node node)
     {
-        // When a node is removed from the scene, remove it from the raytracing simulation too
-        if (node.HasMeta(PRIMITIVE_META_KEY))
-        {
-            var primitive = node.GetMeta(PRIMITIVE_META_KEY).As<VercidiumAudioPrimitiveRef>();
-            context.RemovePrimitive(primitive.Primitive);
-        }
+        ForgetPrimitivesRecursive(node);
     }
 
     public override void _Process(double delta)

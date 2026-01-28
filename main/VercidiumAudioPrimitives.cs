@@ -33,10 +33,16 @@ public partial class VercidiumAudio : Node
             CollectPrimitivesRecursive(child, material);
     }
 
-    static void ForgetPrimitivesRecursive(Node node)
+    void ForgetPrimitivesRecursive(Node node)
     {
+        // When a node is removed from the scene, remove it from the raytracing simulation too
         if (node.HasMeta(PRIMITIVE_META_KEY))
+        {
+            var primitive = node.GetMeta(PRIMITIVE_META_KEY).As<VercidiumAudioPrimitiveRef>();
+            context.RemovePrimitive(primitive.Primitive);
+
             node.RemoveMeta(PRIMITIVE_META_KEY);
+        }
 
         foreach (Node child in node.GetChildren())
             ForgetPrimitivesRecursive(child);
