@@ -5,7 +5,15 @@ public partial class VercidiumAudio : Node
     public ALReverbEffect GetReverbEffect(vaudio.Voice voice)
     {
         if (voice.groupedEAXIndex >= 0)
+        {
+            if (voice.groupedEAXIndex >= groupedReverbEffects.Count)
+            {
+                GD.PushWarning($"Voice {voice.type} has a grouped EAX index of {voice.groupedEAXIndex} but only {groupedReverbEffects.Count} EAX presets are available.");
+                return listenerReverbEffect;
+            }
+
             return groupedReverbEffects[voice.groupedEAXIndex];
+        }
         else
             return listenerReverbEffect;
     }
