@@ -23,7 +23,6 @@ public partial class VercidiumAudio : Node
         GD.Print(prefixed);
     };
 
-    // Log to both - in case we're launched from vs2026 or from the Godot Editor
     static Action<string> LogWarning = (message) =>
     {
         var prefixed = $"[godot_raytraced_audio] {message}";
@@ -32,7 +31,6 @@ public partial class VercidiumAudio : Node
         GD.PushWarning(prefixed);
     };
 
-    // Log to both - in case we're launched from vs2026 or from the Godot Editor
     static Action<string> LogError = (message) =>
     {
         var prefixed = $"[godot_raytraced_audio] {message}";
