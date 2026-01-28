@@ -23,17 +23,28 @@ public partial class VercidiumAudio : Node
         GD.Print(prefixed);
     };
 
+    // Log to both - in case we're launched from vs2026 or from the Godot Editor
+    static Action<string> LogWarning = (message) =>
+    {
+        var prefixed = $"[godot_raytraced_audio] {message}";
+
+        Console.WriteLine(prefixed);
+        GD.PushWarning(prefixed);
+    };
+
+    // Log to both - in case we're launched from vs2026 or from the Godot Editor
+    static Action<string> LogError = (message) =>
+    {
+        var prefixed = $"[godot_raytraced_audio] {message}";
+
+        Console.Error.WriteLine(prefixed);
+        GD.PushError(prefixed);
+    };
+
     public override void _Ready()
     {
         if (Engine.IsEditorHint())
             return;
-
-        // Log to both - in case we're launched from vs2026 or from the Godot Editor
-        Action<string> logCallback = (s) =>
-        {
-            Console.WriteLine(s);
-            GD.Print(s);
-        };
 
         var settings = new vaudio.RaytracingContextSettings()
         {

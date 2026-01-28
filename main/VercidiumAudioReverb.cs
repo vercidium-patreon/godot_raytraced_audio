@@ -8,7 +8,7 @@ public partial class VercidiumAudio : Node
         {
             if (voice.groupedEAXIndex >= groupedReverbEffects.Count)
             {
-                GD.PushWarning($"Voice {voice.type} has a grouped EAX index of {voice.groupedEAXIndex} but only {groupedReverbEffects.Count} EAX presets are available.");
+                LogWarning($"Voice {voice.type} has a grouped EAX index of {voice.groupedEAXIndex} but only {groupedReverbEffects.Count} EAX presets are available.");
                 return listenerReverbEffect;
             }
 

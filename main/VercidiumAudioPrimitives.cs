@@ -161,7 +161,7 @@ public partial class VercidiumAudio : Node
         var meshes = csgPolygon.GetMeshes();
         if (meshes == null || meshes.Count < 2)
         {
-            GD.PushWarning($"godot_raytraced_audio: CsgPolygon3D {csgPolygon.Name} will not affect rayracing as it has no mesh");
+            LogWarning($"CsgPolygon3D {csgPolygon.Name} will not affect rayracing as it has no mesh");
             return;
         }
 
@@ -169,7 +169,7 @@ public partial class VercidiumAudio : Node
         var mesh = meshes[1].As<Mesh>();
         if (mesh == null)
         {
-            GD.PushWarning($"godot_raytraced_audio: CsgPolygon3D {csgPolygon.Name} will not affect rayracing as it's mesh is invalid");
+            LogWarning($"CsgPolygon3D {csgPolygon.Name} will not affect rayracing as it's mesh is invalid");
             return;
         }
 
@@ -202,7 +202,7 @@ public partial class VercidiumAudio : Node
         var mesh = csgMesh.Mesh;
         if (mesh == null)
         {
-            GD.PushWarning($"godot_raytraced_audio: CsgMesh3D {csgMesh.Name} will not affect rayracing as it has no mesh");
+            LogWarning($"CsgMesh3D {csgMesh.Name} will not affect rayracing as it has no mesh");
             return;
         }
 
@@ -375,7 +375,7 @@ public partial class VercidiumAudio : Node
         var mesh = meshInstance.Mesh;
         if (mesh == null)
         {
-            GD.PushWarning($"godot_raytraced_audio: MeshInstance3D {meshInstance.Name} will not affect rayracing as it has no mesh");
+            LogWarning($"MeshInstance3D {meshInstance.Name} will not affect rayracing as it has no mesh");
             return;
         }
 
