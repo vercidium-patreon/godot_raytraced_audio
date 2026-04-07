@@ -2,7 +2,7 @@ namespace godot_raytraced_audio;
 
 public partial class VercidiumAudio : Node
 {
-    public static List<vaudio.Vector3F> ConvertMeshToVector3FList(string name,Mesh mesh, out vaudio.Vector3F minOut, out vaudio.Vector3F maxOut)
+    public static List<vaudio.Vector3F> ConvertMeshToVector3FList(string name, Mesh mesh, out vaudio.Vector3F minOut, out vaudio.Vector3F maxOut)
     {
         List<vaudio.Vector3F> vertices = [];
 
@@ -22,14 +22,15 @@ public partial class VercidiumAudio : Node
 
                 if (calculatedNormal.Dot(meshNormal) < 0)
                 {
-                    // Flip winding
+                    // Flip winding to match mesh normal direction
                     (v1, v2) = (v2, v1);
                 }
             }
 
+            // Godot uses CCW winding; VAudio expects CW — swap v1/v2 to convert
             vertices.Add(ToVAudio(v0));
-            vertices.Add(ToVAudio(v1));
             vertices.Add(ToVAudio(v2));
+            vertices.Add(ToVAudio(v1));
 
             // Update bounds
             min.X = Math.Min(min.X, Math.Min(v0.X, Math.Min(v1.X, v2.X)));
@@ -99,7 +100,7 @@ public partial class VercidiumAudio : Node
                     var v1 = surfaceVertices[index1];
                     var v2 = surfaceVertices[index2];
 
-                    AddTriangle(normals, i, v0, v1, v2);
+                    AddTriangle(normals, index0, v0, v1, v2);
                 }
             }
         }
@@ -221,11 +222,11 @@ public partial class VercidiumAudio : Node
 
                 // Create two triangles for each quad, with clockwise winding for upward-facing normals
                 triangles.Add(v00);
-                triangles.Add(v10);
                 triangles.Add(v01);
                 triangles.Add(v10);
+                triangles.Add(v10);
+                triangles.Add(v01);
                 triangles.Add(v11);
-                triangles.Add(v01);
 
                 // Update bounds
                 min.X = Math.Min(min.X, Math.Min(v00.X, Math.Min(v10.X, Math.Min(v01.X, v11.X))));

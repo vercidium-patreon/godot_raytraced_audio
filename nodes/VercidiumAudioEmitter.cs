@@ -114,6 +114,20 @@ public partial class VercidiumAudioEmitter : Node3D
         }
     }
 
+    bool _AffectsGroupedEAX = true;
+    [Export]
+    public bool AffectsGroupedEAX
+    {
+        get => _AffectsGroupedEAX;
+        set
+        {
+            _AffectsGroupedEAX = value;
+
+            if (emitter != null)
+                emitter.AffectsGroupedEAX = value;
+        }
+    }
+
     [ExportGroup("Orientation")]
 
     float _Pitch;
@@ -187,7 +201,7 @@ public partial class VercidiumAudioEmitter : Node3D
         }
     }
     
-    int _OcclusionBounceCount = 64;
+    int _OcclusionBounceCount = 8;
     [Export(PropertyHint.Range, "1,128,1")] public int OcclusionBounceCount
     { 
         get => _OcclusionBounceCount;
@@ -213,7 +227,7 @@ public partial class VercidiumAudioEmitter : Node3D
         }
     }
     
-    int _PermeationBounceCount = 64;
+    int _PermeationBounceCount = 4;
     [Export(PropertyHint.Range, "1,128,1")] public int PermeationBounceCount
     { 
         get => _PermeationBounceCount;
@@ -239,7 +253,7 @@ public partial class VercidiumAudioEmitter : Node3D
         }
     }
     
-    int _AmbientPermeationBounceCount = 64;
+    int _AmbientPermeationBounceCount = 4;
     [Export(PropertyHint.Range, "1,128,1")] public int AmbientPermeationBounceCount
     { 
         get => _AmbientPermeationBounceCount;
@@ -252,8 +266,8 @@ public partial class VercidiumAudioEmitter : Node3D
         }
     }
 
-    int _VisualisationRayCount = 128;
-    [Export(PropertyHint.Range, "32,1024,16")] public int VisualisationRayCount
+    int _VisualisationRayCount = 0;
+    [Export(PropertyHint.Range, "0,1024,16")] public int VisualisationRayCount
     { 
         get => _VisualisationRayCount;
         set
@@ -264,10 +278,11 @@ public partial class VercidiumAudioEmitter : Node3D
                 emitter.VisualisationRayCount = value;
         }
     }
-    
-    int _VisualisationBounceCount = 64;
-    [Export(PropertyHint.Range, "1,128,1")] public int VisualisationBounceCount
-    { 
+
+    int _VisualisationBounceCount = 0;
+    [Export(PropertyHint.Range, "0,128,1")]
+    public int VisualisationBounceCount
+    {
         get => _VisualisationBounceCount;
         set
         {
@@ -275,6 +290,19 @@ public partial class VercidiumAudioEmitter : Node3D
 
             if (emitter != null)
                 emitter.VisualisationBounceCount = value;
+        }
+    }
+    
+    int _VisualisationUpdateFrequency = 500;
+    [Export(PropertyHint.Range, "50,1000,50")] public int VisualisationUpdateFrequency
+    { 
+        get => _VisualisationUpdateFrequency;
+        set
+        {
+            _VisualisationUpdateFrequency = value;
+
+            if (emitter != null)
+                emitter.VisualisationUpdateFrequency = value;
         }
     }
 }

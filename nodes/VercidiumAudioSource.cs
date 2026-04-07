@@ -43,7 +43,18 @@ public partial class VercidiumAudioSource : ALSource3D
         emitter = new VercidiumAudioEmitter()
         {
             Name = $"{Name}-Emitter",
+
+            // Disable all but reverb
+            OcclusionRayCount = 0,
+            PermeationRayCount = 0,
+            AmbientPermeationRayCount = 0,
+
+            // Less rays for individual sources
+            ReverbRayCount = 32,
+            ReverbBounceCount = 64,
         };
+
+
         AddChild(emitter);
     }
 

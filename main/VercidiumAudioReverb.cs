@@ -38,20 +38,23 @@ public partial class VercidiumAudio : Node
         }
 
         // Apply raytraced EAX results to ALReverbEffects
-        CopyReverb(listener.EAX, listenerReverbEffect, false);
+        CopyReverb(-1, listener.EAX, listenerReverbEffect, false);
 
         for (int i = 0; i < context.GroupedEAX.Count; i++)
         {
             if (groupedReverbEffects.Count <= i)
                 groupedReverbEffects.Add(new());
 
-            CopyReverb(context.GroupedEAX[i], groupedReverbEffects[i], true);
+            CopyReverb(i, context.GroupedEAX[i], groupedReverbEffects[i], true);
 
             groupedReverbEffects[i].Update();
         }
     }
 
-    void CopyReverb(vaudio.EAXReverbResults eax, ALReverbEffect effect, bool isGroupedEAX)
+    AnimatedFloat[] animatedRoomDiameters = new AnimatedFloat[16];
+    AnimatedVector3F[] animatedEAXCenter = new AnimatedVector3F[16];
+
+    void CopyReverb(int index, vaudio.EAXReverbResults eax, ALReverbEffect effect, bool isGroupedEAX)
     {
         effect.gain = 1;
 
@@ -89,25 +92,50 @@ public partial class VercidiumAudio : Node
 
             var cameraPosition = new vaudio.Vector3F(pos.X, pos.Y, pos.Z);
 
-            var diff = cameraPosition - eax.Center;
-            var mag = diff.Magnitude;
+            var roomDiameterRaw = (eax.BoundsMax - eax.BoundsMin).Magnitude;
+
+            // Animate center over 500ms to prevent stutters with moving sources with few reverb rays
+            var animatedCenter = animatedEAXCenter[index];
+            var animatedRoomDiameter = animatedRoomDiameters[index];
+
+            if (animatedCenter == null)
+            {
+                animatedCenter = animatedEAXCenter[index] = new(eax.Center, 500, false);
+                animatedRoomDiameter = animatedRoomDiameters[index] = new(roomDiameterRaw, 500, false);
+            }
+            else
+            {
+                animatedCenter.Value = eax.Center;
+                animatedRoomDiameter.Value = roomDiameterRaw;
+            }
+
+
+            var diff = cameraPosition - animatedCenter.Value;
+            var cameraDistance = diff.Magnitude;
+
+            var roomDiameter = animatedRoomDiameter.Value;
+            var roomRadius = roomDiameter * 0.23f;
+
+            var smoothDistance = 4f;
 
 
             // Interpolate from PanAL to (0, 0, 0) when we're inside the same room
             eax.PanAL[0] = eax.PanAL[0].Normalized;
 
-            var roomRadius = (eax.BoundsMax - eax.BoundsMin).Magnitude;
-            roomRadius = MathF.Pow(roomRadius, 0.77f);
-
-            var smoothDistance = 2.5f;
-
-            if (mag < roomRadius)
+            if (cameraDistance < roomRadius)
             {
                 var threshold = roomRadius - smoothDistance;
-                var strength = Math.Max(0, mag - threshold) / smoothDistance;
+                var strength = Math.Max(0, cameraDistance - threshold) / smoothDistance;
 
                 eax.PanAL[0] *= strength;
             }
+
+            context.LogCallback(cameraPosition.ToString());
+            context.LogCallback(eax.Center.ToString());
+            context.LogCallback(animatedCenter.Value.ToString());
+            context.LogCallback(roomRadius.ToString());
+            context.LogCallback(cameraDistance.ToString());
+            context.LogCallback(eax.PanAL[0].ToString());
 
 
             // Handle normalisation failures

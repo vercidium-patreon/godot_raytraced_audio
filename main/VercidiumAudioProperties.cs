@@ -20,8 +20,9 @@ public partial class VercidiumAudio : Node
     }
 
     Vector3 _worldSize = new(200, 100, 200);
-    [Export] public Vector3 WorldSize
-    { 
+    [Export]
+    public Vector3 WorldSize
+    {
         get => _worldSize;
         set
         {
@@ -29,6 +30,19 @@ public partial class VercidiumAudio : Node
 
             if (context != null)
                 context.WorldSize = ToVAudio(value);
+        }
+    }
+
+    float _MetersPerUnit = 1;
+    [Export(PropertyHint.Range, "0.01,100")] public float MetersPerUnit
+    { 
+        get => _MetersPerUnit;
+        set
+        {
+            _MetersPerUnit = value;
+
+            if (context != null)
+                context.MetersPerUnit = value;
         }
     }
 

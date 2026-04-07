@@ -19,6 +19,7 @@ public partial class VercidiumAudio : Node
             AmbientPermeationBounceCount = node.AmbientPermeationBounceCount,
             VisualisationRayCount = node.VisualisationRayCount,
             VisualisationBounceCount = node.VisualisationBounceCount,
+            AffectsGroupedEAX = node.AffectsGroupedEAX,
         };
 
         context.AddEmitter(emitter);

@@ -163,9 +163,12 @@ public partial class VercidiumAudio : Node
             listener.Yaw = cameraYaw;
         }
 
-        context.CameraPosition = cameraPosition;
-        context.CameraPitch = cameraPitch;
-        context.CameraYaw = cameraYaw;
+        context.MaximumConcurrencyLevel = 1;
+        context.MetersPerUnit = 0.5f;
+
+        //context.CameraPosition = cameraPosition;
+        //context.CameraPitch = cameraPitch;
+        //context.CameraYaw = cameraYaw;
         context.FieldOfView = fieldOfView;
 
         ApplyMaterialUpdates();
