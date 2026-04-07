@@ -6,39 +6,15 @@ public partial class VercidiumAudio : Node
 
     /// <summary>
     /// Create materials from all child RaytracedAudioMaterial nodes.
-    /// Call this before creating the RaytracingContext.
+    /// Call this after creating the RaytracingContext.
     /// </summary>
-    void RegisterCustomMaterials(vaudio.RaytracingContextSettings settings)
+    void RegisterCustomMaterials()
     {
         customMaterials.Clear();
 
         foreach (var child in GetChildren())
-        {
-            var material = child as VercidiumAudioMaterial;
-            if (material != null)
-            {
-                // Validate material ID
-                if (material.MaterialId < 1000)
-                {
-                    LogError($"Custom material {material.MaterialName} has an invalid ID: {material.MaterialId}");
-                    continue;
-                }
-
-                if (customMaterials.TryGetValue(material.MaterialId, out var existingMaterial))
-                {
-                    LogError($"custom material {material.MaterialName} has a duplicate material ID: {material.MaterialId} which is already used by the {existingMaterial.Name} material");
-                    continue;
-                }
-
-                var materialType = (vaudio.MaterialType)material.MaterialId;
-                var rgb = material.GetDebugColorRGB();
-
-                settings.materials.properties[materialType] = material.CreateProperties();
-                settings.materials.colors[materialType] = new(rgb.r, rgb.g, rgb.b);
-
-                customMaterials[material.MaterialId] = material;
-            }
-        }
+            if (child is VercidiumAudioMaterial material)
+                RegisterMaterial(material);
     }
 
     // TODO - remove this, and update the context when the materials themselves are edited.
@@ -53,12 +29,35 @@ public partial class VercidiumAudio : Node
             var materialType = (vaudio.MaterialType)kvp.Key;
             var contextMaterial = context.GetMaterial(materialType);
 
-            contextMaterial.AbsorptionLF = material.AbsorptionLF;
-            contextMaterial.AbsorptionHF = material.AbsorptionHF;
-            contextMaterial.ScatteringLF = material.ScatteringLF;
-            contextMaterial.ScatteringHF = material.ScatteringHF;
-            contextMaterial.TransmissionLF = material.TransmissionLF;
-            contextMaterial.TransmissionHF = material.TransmissionHF;
+            if (contextMaterial.AbsorptionLF != material.AbsorptionLF)
+            {
+                contextMaterial.AbsorptionLF = material.AbsorptionLF;
+                context.MaterialsDirty = true;
+            }
+
+            if (contextMaterial.AbsorptionHF != material.AbsorptionHF)
+            {
+                contextMaterial.AbsorptionHF = material.AbsorptionHF;
+                context.MaterialsDirty = true;
+            }
+
+            if (contextMaterial.Scattering != material.Scattering)
+            {
+                contextMaterial.Scattering = material.Scattering;
+                context.MaterialsDirty = true;
+            }
+
+            if (contextMaterial.TransmissionLF != material.TransmissionLF)
+            {
+                contextMaterial.TransmissionLF = material.TransmissionLF;
+                context.MaterialsDirty = true;
+            }
+
+            if (contextMaterial.TransmissionHF != material.TransmissionHF)
+            {
+                contextMaterial.TransmissionHF = material.TransmissionHF;
+                context.MaterialsDirty = true;
+            }
         }
     }
 
@@ -67,32 +66,48 @@ public partial class VercidiumAudio : Node
     /// </summary>
     public void RegisterMaterial(VercidiumAudioMaterial material)
     {
-        // TODO - unsure if we'll allow creating custom materials after the context has been created
-        //if (context != null)
-        //    throw new InvalidOperationException("Cannot create materials after the context has been created");
-
         if (material == null)
-            throw new InvalidOperationException("Cannot register a null material");
+        {
+            LogError("Cannot register a null material");
+            return;
+        }
 
         if (material.MaterialId < 1000)
-            throw new InvalidOperationException($"Custom material {material.MaterialName} has an invalid ID: {material.MaterialId}. Must be >= 1000");
+        {
+            LogError($"Custom material {material.MaterialName} has an invalid ID: {material.MaterialId}. Must be >= 1000");
+            return;
+        }
 
         if (customMaterials.TryGetValue(material.MaterialId, out var existingMaterial))
-            throw new InvalidOperationException($"Custom material {material.MaterialName} has a duplicate ID: {material.MaterialId} which is already used by the {existingMaterial.Name} material");
+        {
+            LogError($"Custom material {material.MaterialName} has a duplicate ID: {material.MaterialId} which is already used by the {existingMaterial.Name} material");
+            return;
+        }
 
-        // Register with active context
         var materialType = (vaudio.MaterialType)material.MaterialId;
-        var contextMaterial = context.GetMaterial(materialType);
+        var (r, g, b) = material.GetDebugColorRGB();
+        var vaudioColour = new vaudio.Color(r, g, b, 255);
 
-        // Update material properties (these are the properties exposed by vaudio.Material)
-        contextMaterial.AbsorptionLF = material.AbsorptionLF;
-        contextMaterial.AbsorptionHF = material.AbsorptionHF;
-        contextMaterial.ScatteringLF = material.ScatteringLF;
-        contextMaterial.ScatteringHF = material.ScatteringHF;
-        contextMaterial.TransmissionLF = material.TransmissionLF;
-        contextMaterial.TransmissionHF = material.TransmissionHF;
+        if (context.HasMaterial(materialType))
+        {
+            var mat = context.GetMaterial(materialType);
+
+            mat.AbsorptionLF = material.AbsorptionLF;
+            mat.AbsorptionHF = material.AbsorptionHF;
+            mat.Scattering = material.Scattering;
+            mat.TransmissionLF = material.TransmissionLF;
+            mat.TransmissionHF = material.TransmissionHF;
+
+            context.SetMaterialColor(materialType, vaudioColour);
+        }
+        else
+        {
+            context.AddMaterial(materialType, material.CreateProperties(), vaudioColour);
+        }
 
         customMaterials[material.MaterialId] = material;
+
+        context.MaterialsDirty = true;
     }
 
     /// <summary>
@@ -108,7 +123,7 @@ public partial class VercidiumAudio : Node
             // Check if it's a custom material name
             foreach (var kvp in customMaterials)
             {
-                if (kvp.Value.MaterialName.ToLower() == materialString.ToLower())
+                if (kvp.Value.MaterialName.Equals(materialString, StringComparison.CurrentCultureIgnoreCase))
                 {
                     return (vaudio.MaterialType)kvp.Key;
                 }
@@ -123,5 +138,4 @@ public partial class VercidiumAudio : Node
 
         return vaudio.MaterialType.Air;
     }
-
 }

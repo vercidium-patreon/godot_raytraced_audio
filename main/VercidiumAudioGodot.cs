@@ -44,27 +44,18 @@ public partial class VercidiumAudio : Node
         if (Engine.IsEditorHint())
             return;
 
-        var settings = new vaudio.RaytracingContextSettings()
+        context = new()
         {
-            worldPosition = new(WorldPosition.X, WorldPosition.Y, WorldPosition.Z),
-            worldSize = new(WorldSize.X, WorldSize.Y, WorldSize.Z),
-            renderingEnabled = RenderingEnabled,
-            maxVoices = MaxVoices,
-            reverbRayCount = ReverbRayCount,
-            occlusionRayCount = OcclusionRayCount,
-            permeationRayCount = PermeationRayCount,
-            trailBounceCount = TrailBounceCount,
-            maximumGroupedEAXCount = MaximumGroupedEAXCount,
-            voiceReverbRayCount = VoiceReverbRayCount,
-            voiceReverbBounceCount = VoiceReverbBounceCount,
-            logCallback = Log,
-            onReverbUpdated = UpdateGodotReverb
+            LogCallback = Log,
+            WorldPosition = new(WorldPosition.X, WorldPosition.Y, WorldPosition.Z),
+            WorldSize = new(WorldSize.X, WorldSize.Y, WorldSize.Z),
+            RenderingEnabled = RenderingEnabled,
+            MaximumGroupedEAXCount = MaximumGroupedEAXCount,
+            OnReverbUpdated = UpdateGodotReverb
         };
 
         // Register custom materials from child RaytracedAudioMaterial resources
-        RegisterCustomMaterials(settings);
-
-        context = new(settings);
+        RegisterCustomMaterials();
 
         // Create reverb effects
         OnDeviceRecreated();
@@ -166,8 +157,16 @@ public partial class VercidiumAudio : Node
         var fieldOfView = 90 / 180.0f * MathF.PI;
 
         // Sync the listener + debug window to the Godot camera
-        context.UpdateListener(cameraPosition, cameraPitch, cameraYaw);
-        context.SetRenderView(cameraPosition, cameraPitch, cameraYaw, fieldOfView);
+        if (listener != null)
+        {
+            listener.Pitch = cameraPitch;
+            listener.Yaw = cameraYaw;
+        }
+
+        context.CameraPosition = cameraPosition;
+        context.CameraPitch = cameraPitch;
+        context.CameraYaw = cameraYaw;
+        context.FieldOfView = fieldOfView;
 
         ApplyMaterialUpdates();
 

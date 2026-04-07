@@ -3,19 +3,58 @@ namespace godot_raytraced_audio;
 [Tool]
 public partial class VercidiumAudio : Node
 {
-    public vaudio.Voice AttachVoice(Node3D node, Action OnRaytracingComplete)
+    public vaudio.Emitter AttachEmitter(VercidiumAudioEmitter node, Action OnRaytracingComplete)
     {
-        var voice = context.CreateVoice(new vaudio.FuncPositionF(() =>ToVAudio(node.GlobalPosition)));
-        voice.OnRaytracingComplete = OnRaytracingComplete;
+        var emitter = new vaudio.Emitter
+        {
+            Position = new vaudio.FuncPosition(() => ToVAudio(node.GlobalPosition)),
+            OnRaytracingComplete = OnRaytracingComplete,
+            ReverbRayCount = node.ReverbRayCount,
+            ReverbBounceCount = node.ReverbBounceCount,
+            OcclusionRayCount = node.OcclusionRayCount,
+            OcclusionBounceCount = node.OcclusionBounceCount,
+            PermeationRayCount = node.PermeationRayCount,
+            PermeationBounceCount = node.PermeationBounceCount,
+            AmbientPermeationRayCount = node.AmbientPermeationRayCount,
+            AmbientPermeationBounceCount = node.AmbientPermeationBounceCount,
+            VisualisationRayCount = node.VisualisationRayCount,
+            VisualisationBounceCount = node.VisualisationBounceCount,
+        };
 
-        return voice;
+        context.AddEmitter(emitter);
+
+        if (node.IsMainListener)
+        {
+            if (listener == null)
+            {
+                listener = node;
+            }
+            else
+            {
+                GD.PushWarning($"The {listener.Name} node has already been set as the IsMainListener node, but the {node.Name} node also has IsMainListener set to true. Only one node can be the main listener");
+            }
+        }
+        else
+        {
+            if (listener == null)
+            {
+                GD.PushWarning($"Emitters cannot be added before the main listener emitteris created. Ensure a VercidiumAudioEmitter node exists as a child node of VercidiumAudio, with IsMainListener set to true.");
+            }
+            else
+            {
+                listener.AddTarget(emitter);
+            }
+        }
+
+        return emitter;
     }
 
-    public void DetachVoice(Node3D node, vaudio.Voice voice)
+    public void DetachVoice(Node3D node, vaudio.Emitter voice)
     {
         Debug.Assert(voice != null);
 
-        context.RemoveVoice(voice);
+        listener.RemoveTarget(voice);
+        context.RemoveEmitter(voice);
     }
 
     // Helpers

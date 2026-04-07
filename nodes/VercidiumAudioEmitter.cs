@@ -1,0 +1,280 @@
+using NAudio.Wave;
+
+namespace godot_raytraced_audio;
+
+[GlobalClass]
+public partial class VercidiumAudioEmitter : Node3D
+{
+    VercidiumAudio vercidiumAudio;
+    public vaudio.Emitter emitter;
+
+    public ALReverbEffect effect;
+    public ALFilter filter;
+
+    public float GainLF => filter?.gain ?? 0;
+    public float GainHF => filter?.gainHF ?? 0;
+    public bool Raytraced => emitter != null && !emitter.Initialising;
+
+    public override void _EnterTree()
+    {
+        vercidiumAudio = this.GetVercidiumAudioParent();
+    }
+
+    public override void _Ready()
+    {
+        if (Engine.IsEditorHint())
+            return;
+
+        if (vercidiumAudio.context == null)
+            CallDeferred("CreateEmitter");
+        else
+            CreateEmitter();
+    }
+
+    public void CreateEmitter()
+    {
+        emitter = vercidiumAudio.AttachEmitter(this, OnRaytracingComplete);
+        Debug.Assert(emitter != null);
+    }
+
+    void OnRaytracingComplete()
+    {
+        Debug.Assert(filter == null);
+
+        filter = new(1, 1);
+        ApplyRaytracingResults();
+    }
+
+    public override void _Process(double delta)
+    {
+        // Wait for deferred call
+        if (emitter == null)
+            return;
+
+        if (Raytraced)
+            ApplyRaytracingResults();
+    }
+
+    void ApplyRaytracingResults()
+    {
+        effect = vercidiumAudio.GetReverbEffect(emitter);
+
+        if (vercidiumAudio.listener == null)
+            return;
+
+        if (this != vercidiumAudio.listener)
+        {
+            if (vercidiumAudio.listener.HasRaytracedTarget(emitter))
+            {
+                var vaudioFilter = vercidiumAudio.listener.GetTargetFilter(emitter);
+                filter.SetGain(vaudioFilter.gainLF, vaudioFilter.gainHF);
+            }
+        }
+    }
+
+    public bool HasRaytracedTarget(vaudio.Emitter target) => emitter.HasRaytracedTarget(target);
+    public vaudio.AudioFilter GetTargetFilter(vaudio.Emitter target) => emitter.GetTargetFilter(target);
+
+    public override void _ExitTree()
+    {
+        // Detach voice from VAudio before cleanup
+        if (emitter != null)
+        {
+            vercidiumAudio?.DetachVoice(this, emitter);
+            emitter = null;
+        }
+
+        base._ExitTree();
+    }
+
+    public void AddTarget(vaudio.Emitter target)
+    {
+        emitter.AddTarget(target);
+    }
+
+    public void RemoveTarget(vaudio.Emitter target)
+    {
+        emitter.RemoveTarget(target);
+    }
+
+    public vaudio.RawReverbResults RawReverb => emitter.RawReverb;
+    public vaudio.ProcessedReverbResults ProcessedReverb => emitter.ProcessedReverb;
+    public vaudio.EAXReverbResults EAX => emitter.EAX;
+    public float AmbientPermeationGainLF => emitter.AmbientPermeationGainLF;
+    public float AmbientPermeationGainHF => emitter.AmbientPermeationGainHF;
+
+    bool _IsMainListener;
+    [Export]
+    public bool IsMainListener
+    {
+        get => _IsMainListener;
+        set
+        {
+            _IsMainListener = value;
+        }
+    }
+
+    [ExportGroup("Orientation")]
+
+    float _Pitch;
+    [Export]
+    public float Pitch
+    {
+        get => _Pitch;
+        set
+        {
+            _Pitch = value;
+
+            if (emitter != null)
+                emitter.Pitch = value;
+        }
+    }
+
+    float _Yaw;
+    [Export]
+    public float Yaw
+    {
+        get => _Yaw;
+        set
+        {
+            _Yaw = value;
+
+            if (emitter != null)
+                emitter.Yaw = value;
+        }
+    }
+
+
+    [ExportGroup("Raytracing Quality")]
+
+    int _ReverbRayCount = 128;
+    [Export(PropertyHint.Range, "32,1024,16")]
+    public int ReverbRayCount
+    {
+        get => _ReverbRayCount;
+        set
+        {
+            _ReverbRayCount = value;
+
+            if (emitter != null)
+                emitter.ReverbRayCount = value;
+        }
+    }
+
+    int _ReverbBounceCount = 64;
+    [Export(PropertyHint.Range, "1,128,1")] public int ReverbBounceCount
+    { 
+        get => _ReverbBounceCount;
+        set
+        {
+            _ReverbBounceCount = value;
+
+            if (emitter != null)
+                emitter.ReverbBounceCount = value;
+        }
+    }
+    
+    int _OcclusionRayCount = 128;
+    [Export(PropertyHint.Range, "32,1024,16")] public int OcclusionRayCount
+    { 
+        get => _OcclusionRayCount;
+        set
+        {
+            _OcclusionRayCount = value;
+
+            if (emitter != null)
+                emitter.OcclusionRayCount = value;
+        }
+    }
+    
+    int _OcclusionBounceCount = 64;
+    [Export(PropertyHint.Range, "1,128,1")] public int OcclusionBounceCount
+    { 
+        get => _OcclusionBounceCount;
+        set
+        {
+            _OcclusionBounceCount = value;
+
+            if (emitter != null)
+                emitter.OcclusionBounceCount = value;
+        }
+    }
+
+    int _PermeationRayCount = 128;
+    [Export(PropertyHint.Range, "32,1024,16")] public int PermeationRayCount
+    { 
+        get => _PermeationRayCount;
+        set
+        {
+            _PermeationRayCount = value;
+
+            if (emitter != null)
+                emitter.PermeationRayCount = value;
+        }
+    }
+    
+    int _PermeationBounceCount = 64;
+    [Export(PropertyHint.Range, "1,128,1")] public int PermeationBounceCount
+    { 
+        get => _PermeationBounceCount;
+        set
+        {
+            _PermeationBounceCount = value;
+
+            if (emitter != null)
+                emitter.PermeationBounceCount = value;
+        }
+    }
+
+    int _AmbientPermeationRayCount = 128;
+    [Export(PropertyHint.Range, "32,1024,16")] public int AmbientPermeationRayCount
+    { 
+        get => _AmbientPermeationRayCount;
+        set
+        {
+            _AmbientPermeationRayCount = value;
+
+            if (emitter != null)
+                emitter.AmbientPermeationRayCount = value;
+        }
+    }
+    
+    int _AmbientPermeationBounceCount = 64;
+    [Export(PropertyHint.Range, "1,128,1")] public int AmbientPermeationBounceCount
+    { 
+        get => _AmbientPermeationBounceCount;
+        set
+        {
+            _AmbientPermeationBounceCount = value;
+
+            if (emitter != null)
+                emitter.AmbientPermeationBounceCount = value;
+        }
+    }
+
+    int _VisualisationRayCount = 128;
+    [Export(PropertyHint.Range, "32,1024,16")] public int VisualisationRayCount
+    { 
+        get => _VisualisationRayCount;
+        set
+        {
+            _VisualisationRayCount = value;
+
+            if (emitter != null)
+                emitter.VisualisationRayCount = value;
+        }
+    }
+    
+    int _VisualisationBounceCount = 64;
+    [Export(PropertyHint.Range, "1,128,1")] public int VisualisationBounceCount
+    { 
+        get => _VisualisationBounceCount;
+        set
+        {
+            _VisualisationBounceCount = value;
+
+            if (emitter != null)
+                emitter.VisualisationBounceCount = value;
+        }
+    }
+}

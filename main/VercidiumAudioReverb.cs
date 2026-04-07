@@ -2,36 +2,43 @@ namespace godot_raytraced_audio;
 
 public partial class VercidiumAudio : Node
 {
-    public ALReverbEffect GetReverbEffect(vaudio.Voice voice)
+    public ALReverbEffect GetReverbEffect(vaudio.Emitter emitter)
     {
-        if (voice.groupedEAXIndex >= 0)
+        if (emitter.GroupedEAXIndex >= 0)
         {
-            if (voice.groupedEAXIndex >= groupedReverbEffects.Count)
+            if (emitter.GroupedEAXIndex >= groupedReverbEffects.Count)
             {
-                LogWarning($"Voice {voice.type} has a grouped EAX index of {voice.groupedEAXIndex} but only {groupedReverbEffects.Count} EAX presets are available.");
+                LogWarning($"Emitter {emitter.Name} has a grouped EAX index of {emitter.GroupedEAXIndex} but only {groupedReverbEffects.Count} EAX presets are available.");
                 return listenerReverbEffect;
             }
 
-            return groupedReverbEffects[voice.groupedEAXIndex];
+            return groupedReverbEffects[emitter.GroupedEAXIndex];
         }
-        else
-            return listenerReverbEffect;
+
+        return listenerReverbEffect;
     }
 
     void UpdateGodotReverb()
     {
         // Update ambient gain
         {
-            var ambientClarity = Lerp(0.0f, 1.0f, MathF.Min(1, context.ProcessedReverb.OutsidePercent / 0.4f));
-            float gain = 0.15f + ambientClarity * 0.85f;
-            float gainHF = MathF.Pow(gain, 1.5f);
+            var ambientClarityLF = listener.ProcessedReverb.OutsidePercent;
+            var ambientClarityHF = listener.ProcessedReverb.OutsidePercent;
+            
+            // * 2 because half go into the terrain
+            ambientClarityLF += listener.AmbientPermeationGainLF;
+            ambientClarityHF += listener.AmbientPermeationGainHF;
 
-            ambientFilter ??= new(gain, gainHF);
-            ambientFilter.SetGain(gain, gainHF);
+            ambientClarityLF = MathF.Min(1, ambientClarityLF);
+            ambientClarityHF = MathF.Min(1, ambientClarityHF);
+
+            ambientFilter ??= new(ambientClarityLF, ambientClarityHF);
+            ambientFilter.SetGain(ambientClarityLF, ambientClarityHF);
+
         }
 
         // Apply raytraced EAX results to ALReverbEffects
-        CopyReverb(context.ListenerEAX, listenerReverbEffect, false);
+        CopyReverb(listener.EAX, listenerReverbEffect, false);
 
         for (int i = 0; i < context.GroupedEAX.Count; i++)
         {
@@ -73,12 +80,9 @@ public partial class VercidiumAudio : Node
         effect.decayHFLimit = eax.DecayHFLimit;
 
         // TODO - less hardcoded reverb panning logic
+        // TODO - why using PanAL[0]?
         if (isGroupedEAX)
         {
-            // The gain is the average of all grouped voice's gainLF and gainHF
-            effect.effectSlotGain = eax.ALEffectSlotGain;
-
-
             // Get the difference from the camera to the reverb center
             var camera = GetViewport().GetCamera3D();
             var pos = camera.GlobalPosition;
@@ -90,7 +94,7 @@ public partial class VercidiumAudio : Node
 
 
             // Interpolate from PanAL to (0, 0, 0) when we're inside the same room
-            eax.PanAL = eax.PanAL.Normalized;
+            eax.PanAL[0] = eax.PanAL[0].Normalized;
 
             var roomRadius = (eax.BoundsMax - eax.BoundsMin).Magnitude;
             roomRadius = MathF.Pow(roomRadius, 0.77f);
@@ -102,23 +106,26 @@ public partial class VercidiumAudio : Node
                 var threshold = roomRadius - smoothDistance;
                 var strength = Math.Max(0, mag - threshold) / smoothDistance;
 
-                eax.PanAL *= strength;
+                eax.PanAL[0] *= strength;
             }
 
 
             // Handle normalisation failures
-            if (IsNaNorInfinity(eax.PanAL))
-                eax.PanAL = vaudio.Vector3F.Zero;
+            if (IsNaNorInfinity(eax.PanAL[0]))
+                eax.PanAL[0] = vaudio.Vector3F.Zero;
         }
 
-        // TODO - separate pan for late reverb and reflections
-        effect.lateReverbPan[0] = eax.PanAL.X;
-        effect.lateReverbPan[1] = eax.PanAL.Y;
-        effect.lateReverbPan[2] = eax.PanAL.Z;
+        if (eax.PanAL != null)
+        {
+            // TODO - separate pan for late reverb and reflections
+            effect.lateReverbPan[0] = eax.PanAL[0].X;
+            effect.lateReverbPan[1] = eax.PanAL[0].Y;
+            effect.lateReverbPan[2] = eax.PanAL[0].Z;
 
-        effect.reflectionsPan[0] = eax.PanAL.X;
-        effect.reflectionsPan[1] = eax.PanAL.Y;
-        effect.reflectionsPan[2] = eax.PanAL.Z;
+            effect.reflectionsPan[0] = eax.PanAL[0].X;
+            effect.reflectionsPan[1] = eax.PanAL[0].Y;
+            effect.reflectionsPan[2] = eax.PanAL[0].Z;
+        }
 
         effect.dirty = true;
         effect.Update();

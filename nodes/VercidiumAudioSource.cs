@@ -7,9 +7,9 @@ namespace godot_raytraced_audio;
 public partial class VercidiumAudioSource : ALSource3D
 {
     private VercidiumAudio vercidiumAudio;
-    vaudio.Voice voice;
+    VercidiumAudioEmitter emitter;
 
-    public bool Raytraced => voice != null && !voice.initialising;
+    public bool Raytraced => emitter != null && emitter.Raytraced;
 
     private bool _playWhenRaytracingCompletes = false;
     private bool _wasPlayingBeforeDeviceDestroyed = false;
@@ -34,13 +34,17 @@ public partial class VercidiumAudioSource : ALSource3D
         // Register for device recreated callback to re-play sounds
         ALManager.instance.RegisterDeviceRecreatedCallback(OnDeviceRecreated);
 
-        // Must create the voice after the parent VercidiumAudio node is initialised
-        CallDeferred("CreateVoice");
+        // Must create the emitter after the parent VercidiumAudio node is initialised
+        CallDeferred("CreateEmitter");
     }
 
-    public void CreateVoice()
+    public void CreateEmitter()
     {
-        voice = vercidiumAudio.AttachVoice(this, OnRaytracingComplete);
+        emitter = new VercidiumAudioEmitter()
+        {
+            Name = $"{Name}-Emitter",
+        };
+        AddChild(emitter);
     }
 
     void OnDeviceRecreated()
@@ -74,7 +78,6 @@ public partial class VercidiumAudioSource : ALSource3D
         return played = base.Play();
     }
 
-
     public override void _Process(double delta)
     {
         base._Process(delta);
@@ -90,10 +93,13 @@ public partial class VercidiumAudioSource : ALSource3D
 
     void ApplyRaytracingResults()
     {
-        effect = vercidiumAudio.GetReverbEffect(voice);
+        effect = vercidiumAudio.GetReverbEffect(emitter.emitter);
 
-        // Update the audio filter
-        UpdateFilter(voice.filter.gainLF, voice.filter.gainHF);
+        if (vercidiumAudio.listener.HasRaytracedTarget(emitter.emitter))
+        {
+            var vaudioFilter = vercidiumAudio.listener.GetTargetFilter(emitter.emitter);
+            UpdateFilter(vaudioFilter.gainLF, vaudioFilter.gainHF);
+        }
     }
 
     public override void OnDeviceDestroyed()
@@ -118,8 +124,8 @@ public partial class VercidiumAudioSource : ALSource3D
         // Unregister the device recreated callback
         ALManager.instance.UnregisterDeviceRecreatedCallback(OnDeviceRecreated);
 
-        if (voice != null)
-            vercidiumAudio?.DetachVoice(this, voice);
+        if (emitter != null)
+            vercidiumAudio?.DetachVoice(this, emitter.emitter);
 
         base._ExitTree();
     }

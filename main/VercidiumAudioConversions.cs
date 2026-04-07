@@ -1,26 +1,7 @@
-using System.Xml.Linq;
-
 namespace godot_raytraced_audio;
 
 public partial class VercidiumAudio : Node
 {
-    public static vaudio.Vector3F ToVAudio(Vector3 v) => new(v.X, v.Y, v.Z);
-    public static Vector3 FromVAudio(vaudio.Vector3F v) => new(v.X, v.Y, v.Z);
-
-    public static vaudio.Matrix4F ToVAudio(Transform3D globalTransform)
-    {
-        var basis = globalTransform.Basis;
-        var origin = globalTransform.Origin;
-
-        // Both Godot's Basis and vaudio.Matrix4F are column-major
-        return new vaudio.Matrix4F(
-            basis.X.X, basis.X.Y, basis.X.Z, 0f,
-            basis.Y.X, basis.Y.Y, basis.Y.Z, 0f,
-            basis.Z.X, basis.Z.Y, basis.Z.Z, 0f,
-            origin.X, origin.Y, origin.Z, 1f
-        );
-    }
-
     public static List<vaudio.Vector3F> ConvertMeshToVector3FList(string name,Mesh mesh, out vaudio.Vector3F minOut, out vaudio.Vector3F maxOut)
     {
         List<vaudio.Vector3F> vertices = [];
@@ -238,13 +219,13 @@ public partial class VercidiumAudio : Node
                 vaudio.Vector3F v01 = new(x     - halfWidth, h01, z + 1 - halfDepth);
                 vaudio.Vector3F v11 = new(x + 1 - halfWidth, h11, z + 1 - halfDepth);
 
-                // Create two triangles for each quad, with counter-clockwise winding for upward-facing normals
+                // Create two triangles for each quad, with clockwise winding for upward-facing normals
                 triangles.Add(v00);
-                triangles.Add(v01);
-                triangles.Add(v10);
                 triangles.Add(v10);
                 triangles.Add(v01);
+                triangles.Add(v10);
                 triangles.Add(v11);
+                triangles.Add(v01);
 
                 // Update bounds
                 min.X = Math.Min(min.X, Math.Min(v00.X, Math.Min(v10.X, Math.Min(v01.X, v11.X))));

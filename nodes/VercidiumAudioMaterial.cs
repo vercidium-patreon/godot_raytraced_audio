@@ -1,9 +1,9 @@
 namespace godot_raytraced_audio;
 
 /// <summary>
-/// Custom acoustic material resource for VAudio raytraced audio.
+/// Custom acoustic material resource for the Vercidium Audio plugin.
+/// Must be defined as a child Node of a VercidiumAudio node.
 /// Can be created in the Godot editor and assigned to collision shapes.
-/// Define as a child Node of a VercidiumAudio node.
 /// </summary>
 [Tool]
 [GlobalClass]
@@ -51,14 +51,9 @@ public partial class VercidiumAudioMaterial : Node
     [Export(PropertyHint.Range, "0.0,1.0")] public float AbsorptionHF { get; set; } = 0.1f;
 
     /// <summary>
-    /// Low-frequency scattering coefficient (0.0 to 1.0).
+    /// Scattering coefficient (0.0 to 1.0).
     /// </summary>
-    [Export(PropertyHint.Range, "0.0,1.0")] public float ScatteringLF { get; set; } = 0.3f;
-
-    /// <summary>
-    /// High-frequency scattering coefficient (0.0 to 1.0).
-    /// </summary>
-    [Export(PropertyHint.Range, "0.0,1.0")] public float ScatteringHF { get; set; } = 0.5f;
+    [Export(PropertyHint.Range, "0.0,1.0")] public float Scattering { get; set; } = 0.1f;
 
     /// <summary>
     /// Low-frequency transmission in dB/m (0.0 or greater).
@@ -83,8 +78,7 @@ public partial class VercidiumAudioMaterial : Node
         return new vaudio.MaterialProperties(
             AbsorptionLF,
             AbsorptionHF,
-            ScatteringLF,
-            ScatteringHF,
+            Scattering,
             TransmissionLF,
             TransmissionHF
         );
