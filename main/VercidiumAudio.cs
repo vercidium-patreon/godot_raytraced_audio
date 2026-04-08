@@ -3,6 +3,9 @@ namespace godot_raytraced_audio;
 [Tool]
 public partial class VercidiumAudio : Node
 {
+    // Temp
+    public List<vaudio.Emitter> emitters = [];
+
     public vaudio.Emitter CreateEmitter(VercidiumAudioEmitter node, Action OnRaytracingComplete)
     {
         var emitter = new vaudio.Emitter
@@ -48,15 +51,17 @@ public partial class VercidiumAudio : Node
             }
         }
 
+        emitters.Add(emitter);
         return emitter;
     }
 
-    public void RemoveEmitter(vaudio.Emitter voice)
+    public void RemoveEmitter(vaudio.Emitter emitter)
     {
-        Debug.Assert(voice != null);
+        Debug.Assert(emitter != null);
 
-        listener.RemoveTarget(voice);
-        context.RemoveEmitter(voice);
+        emitters.Add(emitter);
+        listener.RemoveTarget(emitter);
+        context.RemoveEmitter(emitter);
     }
 
     // Log to both - in case we're launched from vs2026 or from the Godot Editor

@@ -1,3 +1,5 @@
+using vaudio;
+
 namespace godot_raytraced_audio;
 
 public partial class VercidiumAudio : Node
@@ -72,7 +74,7 @@ public partial class VercidiumAudio : Node
 
     void CopyReverb(int index, vaudio.EAXReverbResults eax, ALReverbEffect effect, bool isGroupedEAX)
     {
-        effect.gain = 1;
+        effect.gain = 1f;
 
         // Density causes static when updating in real time
         //  See OpenAL Soft GitHub issue: https://github.com/kcat/openal-soft/issues/1229
@@ -104,7 +106,7 @@ public partial class VercidiumAudio : Node
         {
             // Get the difference from the camera to the reverb center
             var camera = GetViewport().GetCamera3D();
-            var pos = camera.GlobalPosition;
+            var pos = listener.GlobalPosition;
 
             var cameraPosition = new vaudio.Vector3F(pos.X, pos.Y, pos.Z);
 
@@ -125,7 +127,7 @@ public partial class VercidiumAudio : Node
                 animatedRoomDiameter.Value = roomDiameterRaw;
             }
 
-
+            /*
             var diff = cameraPosition - animatedCenter.Value;
             var cameraDistance = diff.Magnitude;
 
@@ -133,7 +135,6 @@ public partial class VercidiumAudio : Node
             var roomRadius = roomDiameter * 0.23f;
 
             var smoothDistance = 4f;
-
 
             // Interpolate from PanAL to (0, 0, 0) when we're inside the same room
             eax.PanAL[0] = eax.PanAL[0].Normalized;
@@ -145,6 +146,31 @@ public partial class VercidiumAudio : Node
 
                 eax.PanAL[0] *= strength;
             }
+            */
+
+            Vector3F average = Vector3F.Zero;
+
+            foreach (var r in eax.ReverbBounces)
+            {
+                var diff = (r - cameraPosition).Normalized;
+
+                average += diff;
+            }
+
+            average /= eax.ReverbBounces.Count;
+
+            float meanResultantLength = average.Magnitude;
+            float insideThreshold = 0.6f;  // below this = fully inside (no pan)
+            float outsideThreshold = 0.8f; // above this = fully outside (full pan)
+            float panStrength = Math.Clamp((meanResultantLength - insideThreshold) / (outsideThreshold - insideThreshold), 0f, 1f);
+
+            average /= meanResultantLength; // normalize for direction
+
+            var pan = RaytracingContext.CalculateListenerRelativePan(average * panStrength, listener.Pitch, listener.Yaw);
+
+            eax.PanAL[0] = pan;
+
+            context.LogCallback(pan.ToString());
 
             /*
             context.LogCallback(cameraPosition.ToString());
@@ -152,12 +178,14 @@ public partial class VercidiumAudio : Node
             context.LogCallback(animatedCenter.Value.ToString());
             context.LogCallback(roomRadius.ToString());
             context.LogCallback(cameraDistance.ToString());
-            context.LogCallback(eax.PanAL[0].ToString());
             */
 
             // Handle normalisation failures
             if (IsNaNorInfinity(eax.PanAL[0]))
                 eax.PanAL[0] = vaudio.Vector3F.Zero;
+
+            // Temporary
+            effect.effectSlotGain = listener.GetTargetFilter(emitters[1]).gainLF;
         }
 
         if (eax.PanAL != null)

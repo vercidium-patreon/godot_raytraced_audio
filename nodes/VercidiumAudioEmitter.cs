@@ -77,6 +77,7 @@ public partial class VercidiumAudioEmitter : Node3D
 
     public bool HasRaytracedTarget(VercidiumAudioEmitter target) => emitter.HasRaytracedTarget(target.emitter);
     public vaudio.AudioFilter GetTargetFilter(VercidiumAudioEmitter target) => emitter.GetTargetFilter(target.emitter);
+    public vaudio.AudioFilter GetTargetFilter(vaudio.Emitter target) => emitter.GetTargetFilter(target);
 
     public override void _ExitTree()
     {
