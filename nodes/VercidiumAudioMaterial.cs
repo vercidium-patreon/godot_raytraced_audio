@@ -9,20 +9,61 @@ namespace godot_raytraced_audio;
 [GlobalClass]
 public partial class VercidiumAudioMaterial : Node
 {
-    private int _materialId = 1000;
+    private int _materialType = 1000;
     private string _materialName = "CustomMaterial";
 
+    VercidiumAudio vercidiumAudio;
+    vaudio.MaterialProperties vaudioMaterial;
+
+    public override void _EnterTree()
+    {
+        if (Engine.IsEditorHint())
+            return;
+
+        vercidiumAudio = this.GetVercidiumAudioParent();
+
+        // Prevent duplicates
+        if (vercidiumAudio.customMaterials.ContainsKey(MaterialType))
+        {
+            GD.PushWarning($"The VercidiumAudioMaterial node {Name} has the same material ID ({MaterialType}) as the VercidiumAudioMaterial node {vercidiumAudio.customMaterials[MaterialType].Name}. Please change this to another ID");
+
+            return;
+        }
+
+        // Create the vaudio material
+        vaudioMaterial = new vaudio.MaterialProperties(
+            AbsorptionLF,
+            AbsorptionHF,
+            Scattering,
+            TransmissionLF,
+            TransmissionHF
+        );
+
+        vercidiumAudio.context.AddMaterial((vaudio.MaterialType)MaterialType, vaudioMaterial, GetDebugColor());
+        vercidiumAudio.customMaterials[MaterialType] = this;
+    }
+
+    bool firstSet = true;
+
     /// <summary>
-    /// Unique material ID. Must be >= 1000 to avoid conflicts with built-in materials.
+    /// Unique material ID. Must be >= 1000 to avoid conflicts with built-in materials
     /// </summary>
     [Export(PropertyHint.Range, "1000,9999,1,or_greater,no_slider")]
-    public int MaterialId
+    public int MaterialType
     {
-        get => _materialId;
+        get => _materialType;
         set
         {
-            _materialId = value;
+            if (!firstSet && !Engine.IsEditorHint())
+            {
+                VercidiumAudio.LogWarning($"Cannot change the type of VercidiumAudioMaterial nodes at runtime. Node: {Name}");
+                return;
+            }
+
+            _materialType = value;
             UpdateConfigurationWarnings();
+
+            firstSet = false;
         }
     }
 
@@ -40,61 +81,148 @@ public partial class VercidiumAudioMaterial : Node
         }
     }
 
-    /// <summary>
-    /// Low-frequency absorption coefficient (0.0 to 1.0).
-    /// </summary>
-    [Export(PropertyHint.Range, "0.0,1.0")] public float AbsorptionLF { get; set; } = 0.02f;
+    float _AbsorptionLF = 0.02f;
+    float _AbsorptionHF = 0.1f;
+    float _Scattering = 0.1f;
+    float _TransmissionLF = 50;
+    float _TransmissionHF = 100f;
+    Color _DebugColor = new(1, 0, 1);
 
     /// <summary>
-    /// High-frequency absorption coefficient (0.0 to 1.0).
+    /// Low-frequency absorption coefficient (0.0 to 1.0)
     /// </summary>
-    [Export(PropertyHint.Range, "0.0,1.0")] public float AbsorptionHF { get; set; } = 0.1f;
+    [Export(PropertyHint.Range, "0.0,1.0")] public float AbsorptionLF
+    { 
+        get => _AbsorptionLF;
+        set
+        {
+            // Prevent redundant sets
+            if (value == _AbsorptionLF)
+                return;
 
-    /// <summary>
-    /// Scattering coefficient (0.0 to 1.0).
-    /// </summary>
-    [Export(PropertyHint.Range, "0.0,1.0")] public float Scattering { get; set; } = 0.1f;
+            _AbsorptionLF = value;
 
-    /// <summary>
-    /// Low-frequency transmission in dB/m (0.0 or greater).
-    /// </summary>
-    [Export(PropertyHint.Range, "0.0,1000.0")] public float TransmissionLF { get; set; } = 100;
-
-    /// <summary>
-    /// High-frequency transmission in dB/m (0.0 or greater).
-    /// </summary>
-    [Export(PropertyHint.Range, "0.0,1000.0")] public float TransmissionHF { get; set; } = 150;
-
-    /// <summary>
-    /// Debug color for visualization in VAudio's debug renderer
-    /// </summary>
-    [Export] public Godot.Color DebugColor { get; set; } = new Godot.Color(1, 0, 1); // Pink default
-
-    /// <summary>
-    /// Creates the VAudio material properties from this resource
-    /// </summary>
-    public vaudio.MaterialProperties CreateProperties()
-    {
-        return new vaudio.MaterialProperties(
-            AbsorptionLF,
-            AbsorptionHF,
-            Scattering,
-            TransmissionLF,
-            TransmissionHF
-        );
+            if (vercidiumAudio != null)
+            {
+                vaudioMaterial.AbsorptionLF = value;
+                vercidiumAudio.context.MaterialsDirty = true;
+            }
+        }
     }
 
     /// <summary>
-    /// Gets the debug color as RGB byte values for VAudio
+    /// High-frequency absorption coefficient (0.0 to 1.0)
     /// </summary>
-    public (byte r, byte g, byte b) GetDebugColorRGB()
+    [Export(PropertyHint.Range, "0.0,1.0")]
+    public float AbsorptionHF
     {
-        return (
-            (byte)(DebugColor.R * 255),
-            (byte)(DebugColor.G * 255),
-            (byte)(DebugColor.B * 255)
-        );
+        get => _AbsorptionHF;
+        set
+        {
+            // Prevent redundant sets
+            if (value == _AbsorptionHF)
+                return;
+
+            _AbsorptionHF = value;
+
+            if (vercidiumAudio != null)
+            {
+                vaudioMaterial.AbsorptionHF = value;
+                vercidiumAudio.context.MaterialsDirty = true;
+            }
+        }
     }
+
+    /// <summary>
+    /// Scattering coefficient (0.0 to 1.0)
+    /// </summary>
+    [Export(PropertyHint.Range, "0.0,1.0")]
+    public float Scattering
+    {
+        get => _Scattering;
+        set
+        {
+            // Prevent redundant sets
+            if (value == _Scattering)
+                return;
+
+            _Scattering = value;
+
+            if (vercidiumAudio != null)
+            {
+                vaudioMaterial.Scattering = value;
+                vercidiumAudio.context.MaterialsDirty = true;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Low-frequency transmission in dB/m (0.0 or greater)
+    /// </summary>
+    [Export(PropertyHint.Range, "0.0,1000.0")]
+    public float TransmissionLF
+    {
+        get => _TransmissionLF;
+        set
+        {
+            // Prevent redundant sets
+            if (value == _TransmissionLF)
+                return;
+
+            _TransmissionLF = value;
+
+            if (vercidiumAudio != null)
+            {
+                vaudioMaterial.TransmissionLF = value;
+                vercidiumAudio.context.MaterialsDirty = true;
+            }
+        }
+    }
+
+    /// <summary>
+    /// High-frequency transmission in dB/m (0.0 or greater)
+    /// </summary>
+    [Export(PropertyHint.Range, "0.0,1000.0")]
+    public float TransmissionHF
+    {
+        get => _TransmissionHF;
+        set
+        {
+            // Prevent redundant sets
+            if (value == _TransmissionHF)
+                return;
+
+            _TransmissionHF = value;
+
+            if (vercidiumAudio != null)
+            {
+                vaudioMaterial.TransmissionHF = value;
+                vercidiumAudio.context.MaterialsDirty = true;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Debug color for the VAudio debug renderer
+    /// </summary>
+    [Export] public Color DebugColor
+    { 
+        get => _DebugColor;        
+        set
+        {
+            _DebugColor = value;
+
+            if (vercidiumAudio != null)
+            {
+                vercidiumAudio.context.SetMaterialColor((vaudio.MaterialType)MaterialType, GetDebugColor());
+            }
+        }
+    }
+
+    /// <summary>
+    /// Gets the debug color as a vaudio.Color
+    /// </summary>
+    public vaudio.Color GetDebugColor() => new(DebugColor.R, DebugColor.G, DebugColor.B, 1.0f);
 
     /// <summary>
     /// Validates the material configuration and returns warnings
@@ -103,9 +231,9 @@ public partial class VercidiumAudioMaterial : Node
     {
         var warnings = new List<string>();
 
-        if (MaterialId < 1000)
+        if (MaterialType < 1000)
         {
-            warnings.Add($"Material ID must be >= 1000 (current: {MaterialId}). IDs 0-999 are reserved for built-in materials.");
+            warnings.Add($"Material ID must be >= 1000 (current: {MaterialType}). IDs 0-999 are reserved for built-in materials.");
         }
 
         if (string.IsNullOrWhiteSpace(MaterialName))
@@ -113,6 +241,6 @@ public partial class VercidiumAudioMaterial : Node
             warnings.Add("Material Name should not be empty.");
         }
 
-        return warnings.ToArray();
+        return [.. warnings];
     }
 }

@@ -1,6 +1,7 @@
-global using static rooms.Extensions;
+global using static godot_raytraced_audio.Extensions;
+global using static godot_raytraced_audio.GlobalHelpers;
 
-namespace rooms;
+namespace godot_raytraced_audio;
 
 internal static class Extensions
 {

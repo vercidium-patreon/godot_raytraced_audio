@@ -1,5 +1,3 @@
-using Godot;
-
 namespace godot_raytraced_audio;
 
 public static class NodeExtensions

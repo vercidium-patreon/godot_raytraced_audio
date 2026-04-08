@@ -1,12 +1,10 @@
-using NAudio.Wave;
-
 namespace godot_raytraced_audio;
 
 [GlobalClass]
 public partial class VercidiumAudioEmitter : Node3D
 {
     VercidiumAudio vercidiumAudio;
-    public vaudio.Emitter emitter;
+    vaudio.Emitter emitter;
 
     public ALReverbEffect effect;
     public ALFilter filter;
@@ -17,24 +15,29 @@ public partial class VercidiumAudioEmitter : Node3D
 
     public override void _EnterTree()
     {
-        vercidiumAudio = this.GetVercidiumAudioParent();
-    }
-
-    public override void _Ready()
-    {
         if (Engine.IsEditorHint())
             return;
 
-        if (vercidiumAudio.context == null)
-            CallDeferred("CreateEmitter");
-        else
-            CreateEmitter();
+        vercidiumAudio = this.GetVercidiumAudioParent();
+
+        CreateEmitter();
     }
 
     public void CreateEmitter()
     {
-        emitter = vercidiumAudio.AttachEmitter(this, OnRaytracingComplete);
-        Debug.Assert(emitter != null);
+        if (emitter != null)
+            throw new InvalidOperationException("Emitter already created");
+
+        emitter = vercidiumAudio.CreateEmitter(this, OnRaytracingComplete);
+    }
+
+    public void RemoveEmitter()
+    {
+        if (emitter == null)
+            throw new InvalidOperationException("Emitter already removed");
+
+        vercidiumAudio.RemoveEmitter(emitter);
+        emitter = null;
     }
 
     void OnRaytracingComplete()
@@ -57,32 +60,29 @@ public partial class VercidiumAudioEmitter : Node3D
 
     void ApplyRaytracingResults()
     {
-        effect = vercidiumAudio.GetReverbEffect(emitter);
+        effect = vercidiumAudio.GetReverbEffect(this);
 
         if (vercidiumAudio.listener == null)
             return;
 
         if (this != vercidiumAudio.listener)
         {
-            if (vercidiumAudio.listener.HasRaytracedTarget(emitter))
+            if (vercidiumAudio.listener.HasRaytracedTarget(this))
             {
-                var vaudioFilter = vercidiumAudio.listener.GetTargetFilter(emitter);
+                var vaudioFilter = vercidiumAudio.listener.GetTargetFilter(this);
                 filter.SetGain(vaudioFilter.gainLF, vaudioFilter.gainHF);
             }
         }
     }
 
-    public bool HasRaytracedTarget(vaudio.Emitter target) => emitter.HasRaytracedTarget(target);
-    public vaudio.AudioFilter GetTargetFilter(vaudio.Emitter target) => emitter.GetTargetFilter(target);
+    public bool HasRaytracedTarget(VercidiumAudioEmitter target) => emitter.HasRaytracedTarget(target.emitter);
+    public vaudio.AudioFilter GetTargetFilter(VercidiumAudioEmitter target) => emitter.GetTargetFilter(target.emitter);
 
     public override void _ExitTree()
     {
-        // Detach voice from VAudio before cleanup
+        // Remove emitter from the raytracing scene
         if (emitter != null)
-        {
-            vercidiumAudio?.DetachVoice(this, emitter);
-            emitter = null;
-        }
+            RemoveEmitter();
 
         base._ExitTree();
     }
@@ -97,11 +97,13 @@ public partial class VercidiumAudioEmitter : Node3D
         emitter.RemoveTarget(target);
     }
 
+    // Shortcuts
     public vaudio.RawReverbResults RawReverb => emitter.RawReverb;
     public vaudio.ProcessedReverbResults ProcessedReverb => emitter.ProcessedReverb;
     public vaudio.EAXReverbResults EAX => emitter.EAX;
     public float AmbientPermeationGainLF => emitter.AmbientPermeationGainLF;
     public float AmbientPermeationGainHF => emitter.AmbientPermeationGainHF;
+    public int GroupedEAXIndex => emitter.GroupedEAXIndex;
 
     bool _IsMainListener;
     [Export]

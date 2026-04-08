@@ -104,11 +104,11 @@ public partial class VercidiumAudioSource : ALSource3D
 
     void ApplyRaytracingResults()
     {
-        effect = vercidiumAudio.GetReverbEffect(emitter.emitter);
+        effect = vercidiumAudio.GetReverbEffect(emitter);
 
-        if (vercidiumAudio.listener.HasRaytracedTarget(emitter.emitter))
+        if (vercidiumAudio.listener.HasRaytracedTarget(emitter))
         {
-            var vaudioFilter = vercidiumAudio.listener.GetTargetFilter(emitter.emitter);
+            var vaudioFilter = vercidiumAudio.listener.GetTargetFilter(emitter);
             UpdateFilter(vaudioFilter.gainLF, vaudioFilter.gainHF);
         }
     }
@@ -134,9 +134,6 @@ public partial class VercidiumAudioSource : ALSource3D
 
         // Unregister the device recreated callback
         ALManager.instance.UnregisterDeviceRecreatedCallback(OnDeviceRecreated);
-
-        if (emitter != null)
-            vercidiumAudio?.DetachVoice(this, emitter.emitter);
 
         base._ExitTree();
     }

@@ -3,10 +3,11 @@ namespace godot_raytraced_audio;
 [Tool]
 public partial class VercidiumAudio : Node
 {
-    public vaudio.Emitter AttachEmitter(VercidiumAudioEmitter node, Action OnRaytracingComplete)
+    public vaudio.Emitter CreateEmitter(VercidiumAudioEmitter node, Action OnRaytracingComplete)
     {
         var emitter = new vaudio.Emitter
         {
+            Name = node.Name,
             Position = new vaudio.FuncPosition(() => ToVAudio(node.GlobalPosition)),
             OnRaytracingComplete = OnRaytracingComplete,
             ReverbRayCount = node.ReverbRayCount,
@@ -32,14 +33,14 @@ public partial class VercidiumAudio : Node
             }
             else
             {
-                GD.PushWarning($"The {listener.Name} node has already been set as the IsMainListener node, but the {node.Name} node also has IsMainListener set to true. Only one node can be the main listener");
+                LogWarning($"The {listener.Name} node has already been set as the IsMainListener node, but the {node.Name} node also has IsMainListener set to true. Only one node can be the main listener");
             }
         }
         else
         {
             if (listener == null)
             {
-                GD.PushWarning($"Emitters cannot be added before the main listener emitteris created. Ensure a VercidiumAudioEmitter node exists as a child node of VercidiumAudio, with IsMainListener set to true.");
+                LogWarning($"Emitters cannot be added before the main listener emitter is created. Ensure a VercidiumAudioEmitter node exists as a child node of VercidiumAudio, with IsMainListener set to true");
             }
             else
             {
@@ -50,7 +51,7 @@ public partial class VercidiumAudio : Node
         return emitter;
     }
 
-    public void DetachVoice(Node3D node, vaudio.Emitter voice)
+    public void RemoveEmitter(vaudio.Emitter voice)
     {
         Debug.Assert(voice != null);
 
@@ -58,9 +59,29 @@ public partial class VercidiumAudio : Node
         context.RemoveEmitter(voice);
     }
 
-    // Helpers
-    static bool IsNaNorInfinity(float v) => float.IsNaN(v) || float.IsInfinity(v);
-    static bool IsNaNorInfinity(vaudio.Vector3F v) => IsNaNorInfinity(v.X) || IsNaNorInfinity(v.Y) || IsNaNorInfinity(v.Z);
+    // Log to both - in case we're launched from vs2026 or from the Godot Editor
+    public static Action<string> Log = (message) =>
+    {
+        var prefixed = $"[godot_raytraced_audio] {message}";
 
-    static float Lerp(float current, float target, float lerp) => current + (target - current) * lerp;
+        Console.WriteLine(prefixed);
+        GD.Print(prefixed);
+    };
+
+    public static Action<string> LogWarning = (message) =>
+    {
+        var prefixed = $"[godot_raytraced_audio] {message}";
+
+        Console.WriteLine(prefixed);
+        GD.PushWarning(prefixed);
+    };
+
+    public static Action<string> LogError = (message) =>
+    {
+        var prefixed = $"[godot_raytraced_audio] {message}";
+
+        Console.Error.WriteLine(prefixed);
+        GD.PushError(prefixed);
+    };
+
 }

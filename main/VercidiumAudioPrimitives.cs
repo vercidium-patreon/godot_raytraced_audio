@@ -1,5 +1,3 @@
-using Godot;
-
 namespace godot_raytraced_audio;
 
 public partial class VercidiumAudio : Node
@@ -11,23 +9,23 @@ public partial class VercidiumAudio : Node
             material = GetMaterial(node);
 
         // Ignore nodes without materials
-        if (material == vaudio.MaterialType.Air)
-            return;
-
-        if (node is CsgBox3D csgBox)
-            CreateVAudioPrimitive(csgBox, material);
-        else if (node is CsgCylinder3D csgCylinder)
-            CreateVAudioPrimitive(csgCylinder, material);
-        else if (node is CsgSphere3D csgSphere)
-            CreateVAudioPrimitive(csgSphere, material);
-        else if (node is CsgPolygon3D csgPolygon)
-            CreateVAudioPrimitive(csgPolygon, material);
-        else if (node is CsgMesh3D csgMesh)
-            CreateVAudioPrimitive(csgMesh, material);
-        else if (node is CollisionShape3D collisionShape)
-            CreateVAudioPrimitive(collisionShape, material);
-        else if (node is MeshInstance3D meshInstance)
-            CreateVAudioPrimitive(meshInstance, material);
+        if (material != vaudio.MaterialType.Air)
+        {
+            if (node is CsgBox3D csgBox)
+                CreateVAudioPrimitive(csgBox, material);
+            else if (node is CsgCylinder3D csgCylinder)
+                CreateVAudioPrimitive(csgCylinder, material);
+            else if (node is CsgSphere3D csgSphere)
+                CreateVAudioPrimitive(csgSphere, material);
+            else if (node is CsgPolygon3D csgPolygon)
+                CreateVAudioPrimitive(csgPolygon, material);
+            else if (node is CsgMesh3D csgMesh)
+                CreateVAudioPrimitive(csgMesh, material);
+            else if (node is CollisionShape3D collisionShape)
+                CreateVAudioPrimitive(collisionShape, material);
+            else if (node is MeshInstance3D meshInstance)
+                CreateVAudioPrimitive(meshInstance, material);
+        }
 
         if (recursive)
             foreach (Node child in node.GetChildren())
@@ -173,7 +171,7 @@ public partial class VercidiumAudio : Node
             return;
         }
 
-        var triangles = ConvertMeshToVector3FList(csgPolygon.Name, mesh, out var min, out var max);
+        var triangles = Conversions.ConvertMeshToVector3FList(csgPolygon.Name, mesh, out var min, out var max);
 
         if (triangles.Count == 0)
             return;
@@ -206,7 +204,7 @@ public partial class VercidiumAudio : Node
             return;
         }
 
-        var triangles = ConvertMeshToVector3FList(csgMesh.Name, mesh, out var min, out var max);
+        var triangles = Conversions.ConvertMeshToVector3FList(csgMesh.Name, mesh, out var min, out var max);
 
         if (triangles.Count == 0)
             return;
@@ -321,7 +319,7 @@ public partial class VercidiumAudio : Node
         }
         else if (shape is ConvexPolygonShape3D convexPolygon)
         {
-            var triangles = ConvertConvexPolygonToVector3FList(collisionShape.Name, convexPolygon, out var min, out var max);
+            var triangles = Conversions.ConvertConvexPolygonToVector3FList(collisionShape.Name, convexPolygon, out var min, out var max);
             var transform = ToVAudio(globalTransform);
 
             if (triangles.Count > 0)
@@ -332,7 +330,7 @@ public partial class VercidiumAudio : Node
         }
         else if (shape is HeightMapShape3D heightMap)
         {
-            var triangles = ConvertHeightMapToVector3FList(collisionShape.Name, heightMap, out var min, out var max);
+            var triangles = Conversions.ConvertHeightMapToVector3FList(collisionShape.Name, heightMap, out var min, out var max);
             var transform = ToVAudio(globalTransform);
 
             if (triangles.Count > 0)
@@ -343,7 +341,7 @@ public partial class VercidiumAudio : Node
         }
         else if (shape is ConcavePolygonShape3D polygon)
         {
-            var triangles = ConvertConcavePolygonToVector3FList(collisionShape.Name, polygon, out var min, out var max);
+            var triangles = Conversions.ConvertConcavePolygonToVector3FList(collisionShape.Name, polygon, out var min, out var max);
             var transform = ToVAudio(globalTransform);
 
             if (triangles.Count > 0)
@@ -380,7 +378,7 @@ public partial class VercidiumAudio : Node
         }
 
         // Convert mesh to triangle list
-        var triangles = ConvertMeshToVector3FList(meshInstance.Name, mesh, out var min, out var max);
+        var triangles = Conversions.ConvertMeshToVector3FList(meshInstance.Name, mesh, out var min, out var max);
 
         if (triangles.Count == 0)
             return;

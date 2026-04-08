@@ -1,5 +1,3 @@
-using godot_openal;
-
 namespace godot_raytraced_audio;
 
 public class AnimatedVector3F

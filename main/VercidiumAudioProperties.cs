@@ -46,7 +46,8 @@ public partial class VercidiumAudio : Node
         }
     }
 
-    [ExportGroup("Voice Settings")]
+
+    [ExportGroup("EAX")]
 
     int _maximumGroupedEAXCount = 3;
     [Export(PropertyHint.Range, "1,16,1")] public int MaximumGroupedEAXCount
@@ -63,6 +64,17 @@ public partial class VercidiumAudio : Node
 
 
     [ExportGroup("Rendering")]
-    [Export] public bool RenderingEnabled = true;
 
+    bool _renderingEnabled = true;
+    [Export] public bool RenderingEnabled
+    {
+        get => _renderingEnabled;
+        set
+        {
+            _renderingEnabled = value;
+
+            if (context != null)
+                context.RenderingEnabled = value;
+        }
+    }
 }

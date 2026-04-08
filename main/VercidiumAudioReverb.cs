@@ -18,7 +18,23 @@ public partial class VercidiumAudio : Node
         return listenerReverbEffect;
     }
 
-    void UpdateGodotReverb()
+    public ALReverbEffect GetReverbEffect(VercidiumAudioEmitter emitter)
+    {
+        if (emitter.GroupedEAXIndex >= 0)
+        {
+            if (emitter.GroupedEAXIndex >= groupedReverbEffects.Count)
+            {
+                LogWarning($"Emitter {emitter.Name} has a grouped EAX index of {emitter.GroupedEAXIndex} but only {groupedReverbEffects.Count} EAX presets are available.");
+                return listenerReverbEffect;
+            }
+
+            return groupedReverbEffects[emitter.GroupedEAXIndex];
+        }
+
+        return listenerReverbEffect;
+    }
+
+    void OnReverbUpdated()
     {
         // Update ambient gain
         {
@@ -130,13 +146,14 @@ public partial class VercidiumAudio : Node
                 eax.PanAL[0] *= strength;
             }
 
+            /*
             context.LogCallback(cameraPosition.ToString());
             context.LogCallback(eax.Center.ToString());
             context.LogCallback(animatedCenter.Value.ToString());
             context.LogCallback(roomRadius.ToString());
             context.LogCallback(cameraDistance.ToString());
             context.LogCallback(eax.PanAL[0].ToString());
-
+            */
 
             // Handle normalisation failures
             if (IsNaNorInfinity(eax.PanAL[0]))
