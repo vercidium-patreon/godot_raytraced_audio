@@ -4,7 +4,7 @@ namespace godot_raytraced_audio;
 public partial class VercidiumAudioEmitter : Node3D
 {
     VercidiumAudio vercidiumAudio;
-    vaudio.Emitter emitter;
+    public vaudio.Emitter emitter;
 
     public ALReverbEffect effect;
     public ALFilter filter;
@@ -131,6 +131,20 @@ public partial class VercidiumAudioEmitter : Node3D
         }
     }
 
+    bool _HasReverbPan = false;
+    [Export]
+    public bool HasReverbPan
+    {
+        get => _HasReverbPan;
+        set
+        {
+            _HasReverbPan = value;
+
+            if (emitter != null)
+                emitter.HasReverbPan = value;
+        }
+    }
+
     [ExportGroup("Orientation")]
 
     float _Pitch;
@@ -141,9 +155,6 @@ public partial class VercidiumAudioEmitter : Node3D
         set
         {
             _Pitch = value;
-
-            if (emitter != null)
-                emitter.Pitch = value;
         }
     }
 
@@ -155,9 +166,6 @@ public partial class VercidiumAudioEmitter : Node3D
         set
         {
             _Yaw = value;
-
-            if (emitter != null)
-                emitter.Yaw = value;
         }
     }
 

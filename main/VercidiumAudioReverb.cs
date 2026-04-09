@@ -1,4 +1,4 @@
-using vaudio;
+using Silk.NET.SDL;
 
 namespace godot_raytraced_audio;
 
@@ -56,23 +56,20 @@ public partial class VercidiumAudio : Node
         }
 
         // Apply raytraced EAX results to ALReverbEffects
-        CopyReverb(-1, listener.EAX, listenerReverbEffect, false);
+        CopyReverb(listener.EAX, listenerReverbEffect, false);
 
         for (int i = 0; i < context.GroupedEAX.Count; i++)
         {
             if (groupedReverbEffects.Count <= i)
                 groupedReverbEffects.Add(new());
 
-            CopyReverb(i, context.GroupedEAX[i], groupedReverbEffects[i], true);
+            CopyReverb(context.GroupedEAX[i], groupedReverbEffects[i], true);
 
             groupedReverbEffects[i].Update();
         }
     }
 
-    AnimatedFloat[] animatedRoomDiameters = new AnimatedFloat[16];
-    AnimatedVector3F[] animatedEAXCenter = new AnimatedVector3F[16];
-
-    void CopyReverb(int index, vaudio.EAXReverbResults eax, ALReverbEffect effect, bool isGroupedEAX)
+    void CopyReverb(vaudio.EAXReverbResults eax, ALReverbEffect effect, bool isGroupedEAX)
     {
         effect.gain = 1f;
 
@@ -100,104 +97,23 @@ public partial class VercidiumAudio : Node
         effect.roomRolloffFactor = eax.RoomRolloffFactor;
         effect.decayHFLimit = eax.DecayHFLimit;
 
-        // TODO - less hardcoded reverb panning logic
-        // TODO - why using PanAL[0]?
-        if (isGroupedEAX)
+        if (isGroupedEAX && eax.Pan.TryGetValue(listener.emitter, out var pan))
         {
-            // Get the difference from the camera to the reverb center
-            var camera = GetViewport().GetCamera3D();
-            var pos = listener.GlobalPosition;
-
-            var cameraPosition = new vaudio.Vector3F(pos.X, pos.Y, pos.Z);
-
-            var roomDiameterRaw = (eax.BoundsMax - eax.BoundsMin).Magnitude;
-
-            // Animate center over 500ms to prevent stutters with moving sources with few reverb rays
-            var animatedCenter = animatedEAXCenter[index];
-            var animatedRoomDiameter = animatedRoomDiameters[index];
-
-            if (animatedCenter == null)
-            {
-                animatedCenter = animatedEAXCenter[index] = new(eax.Center, 500, false);
-                animatedRoomDiameter = animatedRoomDiameters[index] = new(roomDiameterRaw, 500, false);
-            }
-            else
-            {
-                animatedCenter.Value = eax.Center;
-                animatedRoomDiameter.Value = roomDiameterRaw;
-            }
-
-            /*
-            var diff = cameraPosition - animatedCenter.Value;
-            var cameraDistance = diff.Magnitude;
-
-            var roomDiameter = animatedRoomDiameter.Value;
-            var roomRadius = roomDiameter * 0.23f;
-
-            var smoothDistance = 4f;
-
-            // Interpolate from PanAL to (0, 0, 0) when we're inside the same room
-            eax.PanAL[0] = eax.PanAL[0].Normalized;
-
-            if (cameraDistance < roomRadius)
-            {
-                var threshold = roomRadius - smoothDistance;
-                var strength = Math.Max(0, cameraDistance - threshold) / smoothDistance;
-
-                eax.PanAL[0] *= strength;
-            }
-            */
-
-            Vector3F average = Vector3F.Zero;
-
-            foreach (var r in eax.ReverbBounces)
-            {
-                var diff = (r - cameraPosition).Normalized;
-
-                average += diff;
-            }
-
-            average /= eax.ReverbBounces.Count;
-
-            float meanResultantLength = average.Magnitude;
-            float insideThreshold = 0.6f;  // below this = fully inside (no pan)
-            float outsideThreshold = 0.8f; // above this = fully outside (full pan)
-            float panStrength = Math.Clamp((meanResultantLength - insideThreshold) / (outsideThreshold - insideThreshold), 0f, 1f);
-
-            average /= meanResultantLength; // normalize for direction
-
-            var pan = RaytracingContext.CalculateListenerRelativePan(average * panStrength, listener.Pitch, listener.Yaw);
-
-            eax.PanAL[0] = pan;
+            // Convert to openal
+            pan = vaudio.RaytracingContext.CalculateListenerRelativePan(pan, listener.Pitch, listener.Yaw);
 
             context.LogCallback(pan.ToString());
 
-            /*
-            context.LogCallback(cameraPosition.ToString());
-            context.LogCallback(eax.Center.ToString());
-            context.LogCallback(animatedCenter.Value.ToString());
-            context.LogCallback(roomRadius.ToString());
-            context.LogCallback(cameraDistance.ToString());
-            */
+            effect.effectSlotGain = eax.EffectSlotGain[listener.emitter];
 
-            // Handle normalisation failures
-            if (IsNaNorInfinity(eax.PanAL[0]))
-                eax.PanAL[0] = vaudio.Vector3F.Zero;
-
-            // Temporary
-            effect.effectSlotGain = listener.GetTargetFilter(emitters[1]).gainLF;
-        }
-
-        if (eax.PanAL != null)
-        {
             // TODO - separate pan for late reverb and reflections
-            effect.lateReverbPan[0] = eax.PanAL[0].X;
-            effect.lateReverbPan[1] = eax.PanAL[0].Y;
-            effect.lateReverbPan[2] = eax.PanAL[0].Z;
+            effect.lateReverbPan[0] = pan.X;
+            effect.lateReverbPan[1] = pan.Y;
+            effect.lateReverbPan[2] = pan.Z;
 
-            effect.reflectionsPan[0] = eax.PanAL[0].X;
-            effect.reflectionsPan[1] = eax.PanAL[0].Y;
-            effect.reflectionsPan[2] = eax.PanAL[0].Z;
+            effect.reflectionsPan[0] = pan.X;
+            effect.reflectionsPan[1] = pan.Y;
+            effect.reflectionsPan[2] = pan.Z;
         }
 
         effect.dirty = true;

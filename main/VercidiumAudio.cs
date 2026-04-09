@@ -24,6 +24,7 @@ public partial class VercidiumAudio : Node
             VisualisationRayCount = node.VisualisationRayCount,
             VisualisationBounceCount = node.VisualisationBounceCount,
             AffectsGroupedEAX = node.AffectsGroupedEAX,
+            HasReverbPan = node.HasReverbPan,
         };
 
         context.AddEmitter(emitter);
