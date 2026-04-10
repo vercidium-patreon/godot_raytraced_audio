@@ -23,9 +23,9 @@ public partial class VercidiumAudioMaterial : Node
         vercidiumAudio = this.GetVercidiumAudioParent();
 
         // Prevent duplicates
-        if (vercidiumAudio.customMaterials.ContainsKey(MaterialType))
+        if (vercidiumAudio.customMaterials.TryGetValue(MaterialType, out VercidiumAudioMaterial value))
         {
-            GD.PushWarning($"The VercidiumAudioMaterial node {Name} has the same material ID ({MaterialType}) as the VercidiumAudioMaterial node {vercidiumAudio.customMaterials[MaterialType].Name}. Please change this to another ID");
+            GD.PushWarning($"The VercidiumAudioMaterial node {Name} has the same material ID ({MaterialType}) as the VercidiumAudioMaterial node {value.Name}. Please change this to another ID");
 
             return;
         }
@@ -212,10 +212,7 @@ public partial class VercidiumAudioMaterial : Node
         {
             _DebugColor = value;
 
-            if (vercidiumAudio != null)
-            {
-                vercidiumAudio.context.SetMaterialColor((vaudio.MaterialType)MaterialType, GetDebugColor());
-            }
+            vercidiumAudio?.context.SetMaterialColor((vaudio.MaterialType)MaterialType, GetDebugColor());
         }
     }
 

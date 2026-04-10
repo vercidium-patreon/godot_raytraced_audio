@@ -5,31 +5,26 @@ public partial class VercidiumAudio : Node
     public Dictionary<int, VercidiumAudioMaterial> customMaterials = [];
 
     /// <summary>
-    /// Extract a material type from a node. Returns Air if no materials are found
+    /// Extract a material type from a node. Returns MaterialType.Air if no materials are found
     /// </summary>
     vaudio.MaterialType GetMaterial(Node node)
     {
-        // Priority 2: Check for legacy string-based material
-        if (node.HasMeta(MATERIAL_META_KEY))
-        {
-            var materialString = node.GetMeta(MATERIAL_META_KEY).As<string>();
+        if (!node.HasMeta(MATERIAL_META_KEY))
+            return vaudio.MaterialType.Air;
 
-            // Check if it's a custom material name
-            foreach (var kvp in customMaterials)
-            {
-                if (kvp.Value.MaterialName.Equals(materialString, StringComparison.CurrentCultureIgnoreCase))
-                {
-                    return (vaudio.MaterialType)kvp.Key;
-                }
-            }
+        var materialString = node.GetMeta(MATERIAL_META_KEY).As<string>();
 
-            // Fall back to built-in materials
-            if (DefaultMaterialDict.TryGetValue(materialString, out var type))
-                return type;
+        // Match custom materials
+        foreach (var kvp in customMaterials)
+            if (kvp.Value.MaterialName.Equals(materialString, StringComparison.CurrentCultureIgnoreCase))
+                return (vaudio.MaterialType)kvp.Key;
 
-            LogWarning($"Unknown material string for node {node.Name}: {materialString}. Defaulting to 'air'");
-        }
+        // Match default materials
+        if (DefaultMaterialDict.TryGetValue(materialString, out var type))
+            return type;
 
+        // No material found
+        LogWarning($"Unknown material for node {node.Name}: {materialString}. Defaulting to Air");
         return vaudio.MaterialType.Air;
     }
 }

@@ -103,11 +103,4 @@ public partial class VercidiumAudio : Node
         context.Update();
     }
 
-    public override void _PhysicsProcess(double delta)
-    {
-        if (Engine.IsEditorHint())
-            return;
-
-        UpdatePrimitivesRecursive(SceneRoot);
-    }
 }
