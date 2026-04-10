@@ -54,7 +54,7 @@ public partial class VercidiumAudio : Node
                 RemovePrimitive(child, true);
     }
 
-    VercidiumAudioPrimitiveRef AttachWatcher(Node3D node, vaudio.Primitive prim, Action update)
+    static VercidiumAudioPrimitiveRef AttachWatcher(Node3D node, vaudio.Primitive prim, Action update)
     {
         var watcher = new TransformWatcher { OnTransformChanged = update };
         node.AddChild(watcher);
@@ -396,7 +396,7 @@ public partial class VercidiumAudio : Node
         // Store the primitive on the collision shape, so we can update it later if it moves
         if (prim != null)
         {
-            Action update = () => UpdateCollisionShapePrimitive(collisionShape, prim);
+            void update() => UpdateCollisionShapePrimitive(collisionShape, prim);
             var wrapper = AttachWatcher(collisionShape, prim, update);
 
             if (collisionShape.Shape is BoxShape3D box2)

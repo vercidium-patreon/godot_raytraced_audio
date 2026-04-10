@@ -6,13 +6,14 @@ public partial class VercidiumAudio : Node
     // Temp
     public List<vaudio.Emitter> emitters = [];
 
-    public vaudio.Emitter CreateEmitter(VercidiumAudioEmitter node, Action OnRaytracingComplete)
+    public vaudio.Emitter CreateEmitter(VercidiumAudioEmitter node, Action OnRaytracingComplete, Action<vaudio.Emitter> OnRaytracedByAnotherEmitter)
     {
         var emitter = new vaudio.Emitter
         {
             Name = node.Name,
             Position = new vaudio.FuncPosition(() => ToVAudio(node.GlobalPosition)),
             OnRaytracingComplete = OnRaytracingComplete,
+            OnRaytracedByAnotherEmitter = OnRaytracedByAnotherEmitter,
             ReverbRayCount = node.ReverbRayCount,
             ReverbBounceCount = node.ReverbBounceCount,
             OcclusionRayCount = node.OcclusionRayCount,

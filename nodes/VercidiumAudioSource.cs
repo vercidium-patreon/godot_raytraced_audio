@@ -1,4 +1,5 @@
 using godot_openal;
+using Silk.NET.SDL;
 
 namespace godot_raytraced_audio;
 
@@ -11,31 +12,105 @@ public partial class VercidiumAudioSource : ALSource3D
 
     public bool Raytraced => emitter != null && emitter.Raytraced;
 
-    private bool _playWhenRaytracingCompletes = false;
+    private bool _PlayWhenRaytracingCompletes = true;
+    private bool _RaytraceOnce = true;
     private bool _wasPlayingBeforeDeviceDestroyed = false;
 
     [Export]
     public bool PlayWhenRaytracingCompletes
     {
-        get => _playWhenRaytracingCompletes;
-        set => _playWhenRaytracingCompletes = value;
+        get => _PlayWhenRaytracingCompletes;
+        set => _PlayWhenRaytracingCompletes = value;
+    }
+
+    [Export]
+    public bool RaytraceOnce
+    {
+        get => _RaytraceOnce;
+        set => _RaytraceOnce = value;
+    }
+
+    [ExportGroup("Raytracing Quality")]
+
+    int _ReverbRayCount = 32;
+    [Export(PropertyHint.Range, "16,1024,16")]
+    public int ReverbRayCount
+    {
+        get => _ReverbRayCount;
+        set
+        {
+            _ReverbRayCount = value;
+
+            if (emitter != null)
+                emitter.ReverbRayCount = value;
+        }
+    }
+
+    int _ReverbBounceCount = 64;
+    [Export(PropertyHint.Range, "1,128,1")]
+    public int ReverbBounceCount
+    {
+        get => _ReverbBounceCount;
+        set
+        {
+            _ReverbBounceCount = value;
+
+            if (emitter != null)
+                emitter.ReverbBounceCount = value;
+        }
+    }
+
+    int _VisualisationRayCount = 0;
+    [Export(PropertyHint.Range, "0,128,4")]
+    public int VisualisationRayCount
+    {
+        get => _VisualisationRayCount;
+        set
+        {
+            _VisualisationRayCount = value;
+
+            if (emitter != null)
+                emitter.VisualisationRayCount = value;
+        }
+    }
+
+    int _VisualisationBounceCount = 0;
+    [Export(PropertyHint.Range, "0,32,1")]
+    public int VisualisationBounceCount
+    {
+        get => _VisualisationBounceCount;
+        set
+        {
+            _VisualisationBounceCount = value;
+
+            if (emitter != null)
+                emitter.VisualisationBounceCount = value;
+        }
+    }
+
+    int _VisualisationUpdateFrequency = 500;
+    [Export(PropertyHint.Range, "50,1000,50")]
+    public int VisualisationUpdateFrequency
+    {
+        get => _VisualisationUpdateFrequency;
+        set
+        {
+            _VisualisationUpdateFrequency = value;
+
+            if (emitter != null)
+                emitter.VisualisationUpdateFrequency = value;
+        }
     }
 
     public override void _EnterTree()
     {
         vercidiumAudio = this.GetVercidiumAudioParent();
-    }
-
-    public override void _Ready()
-    {
-        if (Engine.IsEditorHint())
-            return;
 
         // Register for device recreated callback to re-play sounds
         ALManager.instance.RegisterDeviceRecreatedCallback(OnDeviceRecreated);
 
         // Must create the emitter after the parent VercidiumAudio node is initialised
-        CallDeferred("CreateEmitter");
+        CreateEmitter();
     }
 
     public void CreateEmitter()
@@ -43,6 +118,7 @@ public partial class VercidiumAudioSource : ALSource3D
         emitter = new VercidiumAudioEmitter()
         {
             Name = $"{Name}-Emitter",
+            OnRaytracedByAnotherEmitterCallback = OnRaytracedByAnotherEmitter,
 
             // Disable all but reverb
             OcclusionRayCount = 0,
@@ -50,10 +126,13 @@ public partial class VercidiumAudioSource : ALSource3D
             AmbientPermeationRayCount = 0,
 
             // Less rays for individual sources
-            ReverbRayCount = 32,
-            ReverbBounceCount = 64,
-        };
+            ReverbRayCount = ReverbRayCount,
+            ReverbBounceCount = ReverbBounceCount,
 
+            VisualisationRayCount = VisualisationRayCount,
+            VisualisationBounceCount = VisualisationBounceCount,
+            VisualisationUpdateFrequency = VisualisationUpdateFrequency,            
+        };
 
         AddChild(emitter);
     }
@@ -68,12 +147,21 @@ public partial class VercidiumAudioSource : ALSource3D
         }
     }
 
-    void OnRaytracingComplete()
+    void OnRaytracedByAnotherEmitter(vaudio.Emitter other)
     {
-        ApplyRaytracingResults();
+        ApplyRaytracingResults(other);
 
         if (PlayWhenRaytracingCompletes)
             Play();
+
+        // Remove our emitter after we've been raytraced (this is a short sound that doesn't need continuous raytracing)
+        if (RaytraceOnce)
+        {
+            Debug.Assert(emitter != null);
+
+            RemoveChild(emitter);
+            emitter = null;
+        }
     }
 
     bool played = false;
@@ -98,17 +186,17 @@ public partial class VercidiumAudioSource : ALSource3D
             if (!played && PlayWhenRaytracingCompletes)
                 Play();
 
-            ApplyRaytracingResults();
+            ApplyRaytracingResults(vercidiumAudio.listener.emitter);
         }
     }
 
-    void ApplyRaytracingResults()
+    void ApplyRaytracingResults(vaudio.Emitter other)
     {
         effect = vercidiumAudio.GetReverbEffect(emitter);
 
-        if (vercidiumAudio.listener.HasRaytracedTarget(emitter))
+        if (other.HasRaytracedTarget(emitter.emitter))
         {
-            var vaudioFilter = vercidiumAudio.listener.GetTargetFilter(emitter);
+            var vaudioFilter = other.GetTargetFilter(emitter.emitter);
             UpdateFilter(vaudioFilter.gainLF, vaudioFilter.gainHF, true);
         }
     }

@@ -28,7 +28,7 @@ public partial class VercidiumAudioEmitter : Node3D
         if (emitter != null)
             throw new InvalidOperationException("Emitter already created");
 
-        emitter = vercidiumAudio.CreateEmitter(this, OnRaytracingComplete);
+        emitter = vercidiumAudio.CreateEmitter(this, OnRaytracingComplete, OnRaytracedByAnotherEmitter);
     }
 
     public void RemoveEmitter()
@@ -42,10 +42,21 @@ public partial class VercidiumAudioEmitter : Node3D
 
     void OnRaytracingComplete()
     {
+        // Our own reverb and ambient permeation rays have been cast
+        OnRaytracingCompleteCallback?.Invoke();
+    }
+
+    void OnRaytracedByAnotherEmitter(vaudio.Emitter emitter)
+    {
         Debug.Assert(filter == null);
 
         filter = new(1, 1);
         ApplyRaytracingResults();
+
+        if (RaytraceOnce)
+            RemoveEmitter();
+
+        OnRaytracedByAnotherEmitterCallback?.Invoke(emitter);
     }
 
     public override void _Process(double delta)
@@ -116,6 +127,20 @@ public partial class VercidiumAudioEmitter : Node3D
             _IsMainListener = value;
         }
     }
+
+    bool _RaytraceOnce;
+    [Export]
+    public bool RaytraceOnce
+    {
+        get => _RaytraceOnce;
+        set
+        {
+            _RaytraceOnce = value;
+        }
+    }
+
+    public Action OnRaytracingCompleteCallback;
+    public Action<vaudio.Emitter> OnRaytracedByAnotherEmitterCallback;
 
     bool _AffectsGroupedEAX = true;
     [Export]
