@@ -16,13 +16,17 @@ Raytraced audio system with realistic occlusion and reverb for Godot 4.
 - Godot 4.x with C# support
 - Vercidium Audio SDK
 
+## Branches
+
+If using the latest v1.1.0 C# SDK, use the [v110](https://github.com/vercidium-patreon/godot_raytraced_audio/tree/v110) branch. If using an older version, use the [v106](https://github.com/vercidium-patreon/godot_raytraced_audio/tree/v106) branch.
+
 ## Installation
 
-1. Copy the entire `godot_raytraced_audio` folder to your project's `addons/` directory.
+1. Copy or clone the entire `godot_raytraced_audio` folder to your project's `addons/` directory.
 
 ![Screenshot of the your_game/addons folder](docs/addon_folders.png)
 
-2. Copy `vaudio.dll` and its dependencies to the `your_game\.godot\mono\temp\bin\Debug` output folder. To copy these files automatically, see the [csproj example here](https://docs.vercidium.com/raytraced-audio/Project+Setup+and+Troubleshooting).
+2. Copy `vaudio.dll` and its dependencies to the `your_game\.godot\mono\temp\bin\Debug` output folder. To copy these files automatically, see the [csproj example here](https://docs.vercidium.com/raytraced-audio/v110/Project+Setup+and+Troubleshooting).
 
 ![Screenshot of the your_game\.godot\mono\temp\bin\Debug](docs/build_folder_example.png)
 
