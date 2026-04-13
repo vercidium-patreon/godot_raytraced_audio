@@ -2,7 +2,7 @@
 
 References:
 - [godot_openal repo](https://github.com/vercidium-patreon/godot_openal)
-- [C# SDK documentation](https://docs.vercidium.com/raytraced-audio/Getting+Started)
+- [C# SDK documentation](https://docs.vercidium.com/raytraced-audio/v110/Getting+Started)
 
 ### Step 1 - Enable Plugins
 In Project > Project Settings > Plugins:
@@ -46,6 +46,6 @@ To create a new material, add a `VercidiumAudioMaterial` child node to the Verci
 
 ![Scene tree with a VercidiumAudioMaterial node](docs/material_inspector.png)
 
-See the [default material properties](https://docs.vercidium.com/raytraced-audio/Materials#Default+Material+Properties) for reference values.
+See the [default material properties](https://docs.vercidium.com/raytraced-audio/v110/Materials#Default+Material+Properties) for reference values.
 
-You can also edit the default materials by setting the `Material Name` to the same name as a [default material](https://docs.vercidium.com/raytraced-audio/Enums/MaterialType). The material name must be all lowercase, e.g. 'concrete', 'woodindoor', 'metal'.
+You can also edit the default materials by setting the `Material Name` to the same name as a [default material](https://docs.vercidium.com/raytraced-audio/v110/Enums/MaterialType). The material name must be all lowercase, e.g. 'concrete', 'woodindoor', 'metal'.
