@@ -1,4 +1,3 @@
-using System.Linq;
 using godot_openal;
 
 namespace godot_raytraced_audio;
@@ -12,71 +11,32 @@ public partial class VercidiumAudio : Node
 
         // Cache the scene root since we access it often
         SceneRoot = GetTree().CurrentScene as Node3D;
-    }
 
-    // Log to both - in case we're launched from vs2026 or from the Godot Editor
-    static Action<string> Log = (message) =>
-    {
-        var prefixed = $"[godot_raytraced_audio] {message}";
-
-        Console.WriteLine(prefixed);
-        GD.Print(prefixed);
-    };
-
-    static Action<string> LogWarning = (message) =>
-    {
-        var prefixed = $"[godot_raytraced_audio] {message}";
-
-        Console.WriteLine(prefixed);
-        GD.PushWarning(prefixed);
-    };
-
-    static Action<string> LogError = (message) =>
-    {
-        var prefixed = $"[godot_raytraced_audio] {message}";
-
-        Console.Error.WriteLine(prefixed);
-        GD.PushError(prefixed);
-    };
-
-    public override void _Ready()
-    {
-        if (Engine.IsEditorHint())
-            return;
-
-        var settings = new vaudio.RaytracingContextSettings()
+        context = new()
         {
-            worldPosition = new(WorldPosition.X, WorldPosition.Y, WorldPosition.Z),
-            worldSize = new(WorldSize.X, WorldSize.Y, WorldSize.Z),
-            renderingEnabled = RenderingEnabled,
-            maxVoices = MaxVoices,
-            reverbRayCount = ReverbRayCount,
-            occlusionRayCount = OcclusionRayCount,
-            permeationRayCount = PermeationRayCount,
-            trailBounceCount = TrailBounceCount,
-            maximumGroupedEAXCount = MaximumGroupedEAXCount,
-            voiceReverbRayCount = VoiceReverbRayCount,
-            voiceReverbBounceCount = VoiceReverbBounceCount,
-            logCallback = Log,
-            onReverbUpdated = UpdateGodotReverb
+            LogCallback = Log,
+            WorldPosition = new(WorldPosition.X, WorldPosition.Y, WorldPosition.Z),
+            WorldSize = new(WorldSize.X, WorldSize.Y, WorldSize.Z),
+            RenderingEnabled = RenderingEnabled,
+            MaximumGroupedEAXCount = MaximumGroupedEAXCount,
+            OnReverbUpdated = OnReverbUpdated
         };
-
-        // Register custom materials from child RaytracedAudioMaterial resources
-        RegisterCustomMaterials(settings);
-
-        context = new(settings);
 
         // Create reverb effects
         OnDeviceRecreated();
 
         // Register for device destroyed/recreated callbacks to clean up and recreate reverb effects
-        ALManager.instance.RegisterDeviceDestroyedCallback(OnDeviceDestroyed);
         ALManager.instance.RegisterDeviceRecreatedCallback(OnDeviceRecreated);
+        ALManager.instance.RegisterDeviceDestroyedCallback(OnDeviceDestroyed);
 
         // Wait a frame for the scene to be fully loaded
         CallDeferred(nameof(InitializeScene));
+    }
 
-        Log("Ready");
+    void OnDeviceRecreated()
+    {
+        // Recreate the reverb effects after the device is recreated
+        listenerReverbEffect = new();
     }
 
     void OnDeviceDestroyed()
@@ -94,17 +54,9 @@ public partial class VercidiumAudio : Node
         groupedReverbEffects.Clear();
     }
 
-    void OnDeviceRecreated()
-    {
-        // Recreate the reverb effects after the device is recreated
-        listenerReverbEffect = new();
-
-        // Don't create ambientFilter here, as we need raytracing to complete first
-    }
-
     void InitializeScene()
     {
-        foreach (Node child in SceneRoot.GetChildren())
+        foreach (var child in SceneRoot.GetChildren())
             AddPrimitive(child, vaudio.MaterialType.Air, true);
 
         // Listen for scene tree changes
@@ -117,7 +69,6 @@ public partial class VercidiumAudio : Node
         if (Engine.IsEditorHint())
             return;
 
-        // Unregister the device destroyed/recreated callbacks
         ALManager.instance.UnregisterDeviceDestroyedCallback(OnDeviceDestroyed);
         ALManager.instance.UnregisterDeviceRecreatedCallback(OnDeviceRecreated);
 
@@ -132,53 +83,24 @@ public partial class VercidiumAudio : Node
 
     // This fires for the new parent node AND each of its child nodes separately
     //  Parent node is invoked first
-    void OnNodeAdded(Node node)
-    {
-        AddPrimitive(node, vaudio.MaterialType.Air, false); 
-    }
+    void OnNodeAdded(Node node) => AddPrimitive(node, vaudio.MaterialType.Air, false);
 
     // This fires for the new parent node AND each of its child nodes separately
     //  Child nodes are invoked first
-    void OnNodeRemoved(Node node)
-    {
-        RemovePrimitive(node, false);
-    }
+    void OnNodeRemoved(Node node) => RemovePrimitive(node, false);
 
     public override void _Process(double delta)
     {
         if (Engine.IsEditorHint())
             return;
 
-        // TODO - allow custom listener positions (e.g. no Camera3D)
-        var camera = GetViewport().GetCamera3D();
-
-        if (camera == null)
-        {
-            GD.PushError("godot_raytraced_audio: no Camera3D found");
-            return;
-        }
-        
-        var pos = camera.GlobalPosition;
-
-        var cameraPosition = new vaudio.Vector3F(pos.X, pos.Y, pos.Z);
-        var cameraPitch = camera.GlobalRotation.X;
-        var cameraYaw = camera.GlobalRotation.Y;
-        var fieldOfView = 90 / 180.0f * MathF.PI;
-
-        // Sync the listener + debug window to the Godot camera
-        context.UpdateListener(cameraPosition, cameraPitch, cameraYaw);
-        context.SetRenderView(cameraPosition, cameraPitch, cameraYaw, fieldOfView);
-
-        ApplyMaterialUpdates();
+        // Render the debug window from the perspective of the main listener
+        context.CameraPosition = ToVAudio(listener.GlobalPosition);
+        context.CameraPitch = listener.Pitch;
+        context.CameraYaw = listener.Yaw;
+        context.FieldOfView = float.DegreesToRadians(90);
 
         context.Update();
     }
 
-    public override void _PhysicsProcess(double delta)
-    {
-        if (Engine.IsEditorHint())
-            return;
-
-        UpdatePrimitivesRecursive(SceneRoot);
-    }
 }

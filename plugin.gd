@@ -2,7 +2,7 @@
 extends EditorPlugin
 
 const VercidiumAudio = preload("res://addons/godot_raytraced_audio/main/VercidiumAudio.cs")
-const VercidiumAudioVoice = preload("res://addons/godot_raytraced_audio/nodes/VercidiumAudioVoice.cs")
+const VercidiumAudioEmitter = preload("res://addons/godot_raytraced_audio/nodes/VercidiumAudioEmitter.cs")
 const VercidiumAudioMaterial = preload("res://addons/godot_raytraced_audio/nodes/VercidiumAudioMaterial.cs")
 
 const VercidiumAudioSource = preload("res://addons/godot_raytraced_audio/nodes/VercidiumAudioSource.cs")
@@ -14,7 +14,7 @@ func _enter_tree():
 	var iconAL = preload("res://addons/godot_raytraced_audio/icons/vercidium_al.svg")
 
 	add_custom_type("VercidiumAudio", "Node", VercidiumAudio, icon)
-	add_custom_type("VercidiumAudioVoice", "Node3D", VercidiumAudioVoice, icon)
+	add_custom_type("VercidiumAudioEmitter", "Node3D", VercidiumAudioEmitter, icon)
 	add_custom_type("VercidiumAudioMaterial", "Node3D", VercidiumAudioMaterial, icon)
 
 	add_custom_type("VercidiumAudioSource", "Node3D", VercidiumAudioSource, iconAL)
@@ -26,7 +26,7 @@ func _enter_tree():
 
 func _exit_tree():
 	remove_custom_type("VercidiumAudio")
-	remove_custom_type("VercidiumAudioVoice")
+	remove_custom_type("VercidiumAudioEmitter")
 	remove_custom_type("VercidiumAudioMaterial")
 
 	remove_custom_type("VercidiumAudioSource")

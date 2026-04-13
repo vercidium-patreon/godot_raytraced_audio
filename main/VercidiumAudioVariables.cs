@@ -5,7 +5,8 @@ public partial class VercidiumAudio : Node
     public const string PRIMITIVE_META_KEY = "vercidium_audio_primitive";
     public const string MATERIAL_META_KEY = "vercidium_audio_material";
 
-    vaudio.RaytracingContext context;
+    public vaudio.RaytracingContext context;
+    public VercidiumAudioEmitter listener;
 
     public ALFilter ambientFilter;
     public ALReverbEffect listenerReverbEffect;
