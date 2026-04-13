@@ -2,6 +2,11 @@
 
 Raytraced audio system with realistic occlusion and reverb for Godot 4.
 
+13/04/2026 - this repository is updated to use the latest v1.1.0 C# SDK:
+- [Announcement post](https://www.patreon.com/posts/vercidium-audio-153487929)
+- [Breaking changes](https://docs.vercidium.com/raytraced-audio/Breaking+Changes+v1.1.0)
+- [Full changelog](https://docs.vercidium.com/raytraced-audio/Changelog)
+
 ## Features
 
 - Muffle sounds in real time
