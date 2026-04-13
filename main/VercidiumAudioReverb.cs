@@ -1,5 +1,3 @@
-using Silk.NET.SDL;
-
 namespace godot_raytraced_audio;
 
 public partial class VercidiumAudio : Node
@@ -101,8 +99,6 @@ public partial class VercidiumAudio : Node
         {
             // Convert to openal
             pan = vaudio.RaytracingContext.CalculateListenerRelativePan(pan, listener.Pitch, listener.Yaw);
-
-            context.LogCallback(pan.ToString());
 
             effect.effectSlotGain = eax.EffectSlotGain[listener.emitter];
 

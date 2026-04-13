@@ -1,5 +1,4 @@
 using godot_openal;
-using Silk.NET.SDL;
 
 namespace godot_raytraced_audio;
 

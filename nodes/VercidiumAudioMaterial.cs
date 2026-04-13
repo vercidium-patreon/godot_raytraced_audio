@@ -36,7 +36,9 @@ public partial class VercidiumAudioMaterial : Node
             AbsorptionHF,
             Scattering,
             TransmissionLF,
-            TransmissionHF
+            TransmissionHF,
+            PlaneTransmissionLF,
+            PlaneTransmissionHF
         );
 
         vercidiumAudio.context.AddMaterial((vaudio.MaterialType)MaterialType, vaudioMaterial, GetDebugColor());
@@ -86,6 +88,8 @@ public partial class VercidiumAudioMaterial : Node
     float _Scattering = 0.1f;
     float _TransmissionLF = 50;
     float _TransmissionHF = 100f;
+    float _PlaneTransmissionLF = 0.1f;
+    float _PlaneTransmissionHF = 0.25f;
     Color _DebugColor = new(1, 0, 1);
 
     /// <summary>
@@ -197,6 +201,52 @@ public partial class VercidiumAudioMaterial : Node
             if (vercidiumAudio != null)
             {
                 vaudioMaterial.TransmissionHF = value;
+                vercidiumAudio.context.MaterialsDirty = true;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Percentage of low-frequency energy lost when a ray passes through a flat primitive
+    /// </summary>
+    [Export(PropertyHint.Range, "0.0,1.0")]
+    public float PlaneTransmissionLF
+    {
+        get => _PlaneTransmissionLF;
+        set
+        {
+            // Prevent redundant sets
+            if (value == _PlaneTransmissionLF)
+                return;
+
+            _PlaneTransmissionLF = value;
+
+            if (vercidiumAudio != null)
+            {
+                vaudioMaterial.PlaneTransmissionLF = value;
+                vercidiumAudio.context.MaterialsDirty = true;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Percentage of high-frequency energy lost when a ray passes through a flat primitive
+    /// </summary>
+    [Export(PropertyHint.Range, "0.0,1.0")]
+    public float PlaneTransmissionHF
+    {
+        get => _PlaneTransmissionHF;
+        set
+        {
+            // Prevent redundant sets
+            if (value == _PlaneTransmissionHF)
+                return;
+
+            _PlaneTransmissionHF = value;
+
+            if (vercidiumAudio != null)
+            {
+                vaudioMaterial.PlaneTransmissionHF = value;
                 vercidiumAudio.context.MaterialsDirty = true;
             }
         }
