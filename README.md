@@ -29,7 +29,7 @@ If using the latest v1.1.0 C# SDK, use the [v110](https://github.com/vercidium-p
 
 1. Copy or clone the entire `godot_raytraced_audio` folder to your project's `addons/` directory.
 
-![Screenshot of the your_game/addons folder](docs/addon_folders.png)
+![Screenshot of the your_game/addons folder](docs/addons_folder.png)
 
 2. Copy `vaudio.dll` and its dependencies to the `your_game\.godot\mono\temp\bin\Debug` output folder. To copy these files automatically, see the [csproj example here](https://docs.vercidium.com/raytraced-audio/v110/Project+Setup+and+Troubleshooting).
 
@@ -53,8 +53,3 @@ Then close the window, click the same small dropdown arrow, and select `Godot`. 
 ## Requirements
 
 This plugin requires a license for the Vercidium Audio C# SDK. [Apply here](https://vercidium.com/audio) to get early access.
-
-
-## To-do
-
-- Support all Godot primitives (capsule, cylinder, etc)
