@@ -105,8 +105,11 @@ public partial class VercidiumAudioSource : ALSource3D
     {
         vercidiumAudio = this.GetVercidiumAudioParent();
 
-        // Register for device recreated callback to re-play sounds
-        ALManager.instance.RegisterDeviceRecreatedCallback(OnDeviceRecreated);
+        if (!Engine.IsEditorHint())
+        {
+            // Register for device recreated callback to re-play sounds
+            ALManager.instance.RegisterDeviceRecreatedCallback(OnDeviceRecreated);
+        }
 
         // Must create the emitter after the parent VercidiumAudio node is initialised
         CreateEmitter();
@@ -219,8 +222,8 @@ public partial class VercidiumAudioSource : ALSource3D
             return;
         }
 
-        // Unregister the device recreated callback
-        ALManager.instance.UnregisterDeviceRecreatedCallback(OnDeviceRecreated);
+        // Unregister the device recreated callback (only registered when not in editor)
+        ALManager.instance?.UnregisterDeviceRecreatedCallback(OnDeviceRecreated);
 
         base._ExitTree();
     }
