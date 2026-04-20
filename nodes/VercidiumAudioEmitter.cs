@@ -1,5 +1,8 @@
+using System.Linq;
+
 namespace godot_raytraced_audio;
 
+[Tool]
 [GlobalClass]
 public partial class VercidiumAudioEmitter : Node3D
 {
@@ -20,7 +23,42 @@ public partial class VercidiumAudioEmitter : Node3D
 
         vercidiumAudio = this.GetVercidiumAudioParent();
 
+        var test = _GetConfigurationWarnings();
+
+        if (vercidiumAudio == null)
+        {
+            GD.PushWarning($"[godot_raytraced_audio] Failed to initialise node {Name} because there is no VercidiumAudio node. Ensure a VercidiumAudio node exists higher up the tree");
+            return;
+        }
+
+        if (!vercidiumAudio.Initialised)
+        {
+            GD.PushWarning($"[godot_raytraced_audio] Failed to initialise node {Name} because the VercidiumAudio node is not initialised yet. Ensure the VercidiumAudio node is higher up the tree");
+            return;
+        }
+
         CreateEmitter();
+    }
+
+    public override string[] _GetConfigurationWarnings()
+    {
+        var sceneRoot = Engine.IsEditorHint() ? GetTree()?.EditedSceneRoot : GetTree()?.CurrentScene;
+        if (sceneRoot == null)
+            return [];
+
+        var vercidiumAudioNode = sceneRoot.GetChildren().OfType<VercidiumAudio>().FirstOrDefault();
+        if (vercidiumAudioNode == null)
+            return ["No VercidiumAudio node found. Ensure a VercidiumAudio node exists higher up the tree."];
+
+        // Find the top-level ancestor of this node (direct child of scene root)
+        var ancestor = this as Node;
+        while (ancestor.GetParent() != sceneRoot)
+            ancestor = ancestor.GetParent();
+
+        if (ancestor.GetIndex() < vercidiumAudioNode.GetIndex())
+            return ["This node must be lower in the scene tree than the VercidiumAudio node."];
+
+        return [];
     }
 
     public void CreateEmitter()
@@ -61,7 +99,7 @@ public partial class VercidiumAudioEmitter : Node3D
 
     public override void _Process(double delta)
     {
-        // Wait for deferred call
+        // If initialisation failed, skip
         if (emitter == null)
             return;
 

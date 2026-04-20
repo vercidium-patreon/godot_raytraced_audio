@@ -1,3 +1,5 @@
+using System.Linq;
+
 namespace godot_raytraced_audio;
 
 public static class NodeExtensions
@@ -8,6 +10,6 @@ public static class NodeExtensions
         if (sceneRoot == null)
             return null;
 
-        return sceneRoot.GetNodeOrNull<VercidiumAudio>("VercidiumAudio");
+        return sceneRoot.GetChildren().OfType<VercidiumAudio>().FirstOrDefault();
     }
 }

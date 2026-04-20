@@ -21,8 +21,8 @@ func _enter_tree():
 	add_custom_type("VercidiumAudioSourceRelative", "Node", VercidiumAudioSourceRelative, iconAL)
 	add_custom_type("VercidiumAudioSourceAmbient", "Node", VercidiumAudioSourceAmbient, iconAL)
 	
-	print("Vercidium Audio (vaudio) plugin enabled")
-	print("Note: The *Source* nodes require the 'godot_openal' plugin")
+	print("[godot_raytraced_audio] Vercidium Audio (vaudio) plugin enabled")
+	print("[godot_raytraced_audio] Note: the *Source* nodes require the 'godot_openal' plugin")
 
 func _exit_tree():
 	remove_custom_type("VercidiumAudio")

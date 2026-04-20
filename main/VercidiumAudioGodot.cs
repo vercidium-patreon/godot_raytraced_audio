@@ -4,6 +4,8 @@ namespace godot_raytraced_audio;
 
 public partial class VercidiumAudio : Node
 {
+    public bool Initialised => context != null;
+
     public override void _EnterTree()
     {
         if (Engine.IsEditorHint())
@@ -89,10 +91,23 @@ public partial class VercidiumAudio : Node
     //  Child nodes are invoked first
     void OnNodeRemoved(Node node) => RemovePrimitive(node, false);
 
+    bool NoListenerErrorLogged;
+
     public override void _Process(double delta)
     {
         if (Engine.IsEditorHint())
             return;
+
+        if (listener == null)
+        {
+            if (!NoListenerErrorLogged)
+            {
+                LogError($"Failed to update node {Name} because there is no main listener. Ensure a VercidiumAudioEmitter exists with `IsMainListener` set to true");
+                NoListenerErrorLogged = true;
+            }
+
+            return;
+        }
 
         // Render the debug window from the perspective of the main listener
         context.CameraPosition = ToVAudio(listener.GlobalPosition);
