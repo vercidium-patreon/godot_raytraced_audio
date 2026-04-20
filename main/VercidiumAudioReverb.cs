@@ -4,7 +4,7 @@ public partial class VercidiumAudio : Node
 {
     public ALReverbEffect GetReverbEffect(vaudio.Emitter emitter)
     {
-        if (emitter.GroupedEAXIndex >= 0)
+        if (emitter.AffectsGroupedEAX && emitter.GroupedEAXIndex >= 0)
         {
             if (emitter.GroupedEAXIndex >= groupedReverbEffects.Count)
             {
@@ -20,7 +20,7 @@ public partial class VercidiumAudio : Node
 
     public ALReverbEffect GetReverbEffect(VercidiumAudioEmitter emitter)
     {
-        if (emitter.GroupedEAXIndex >= 0)
+        if (emitter.AffectsGroupedEAX && emitter.GroupedEAXIndex >= 0)
         {
             if (emitter.GroupedEAXIndex >= groupedReverbEffects.Count)
             {
