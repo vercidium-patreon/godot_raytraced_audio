@@ -48,9 +48,11 @@ public partial class VercidiumAudio : Node
             ambientClarityLF = MathF.Min(1, ambientClarityLF);
             ambientClarityHF = MathF.Min(1, ambientClarityHF);
 
-            ambientFilter ??= new(ambientClarityLF, ambientClarityHF);
-            ambientFilter.SetGain(ambientClarityLF, ambientClarityHF);
-
+            if (GodotOpenALEnabled)
+            {
+                ambientFilter ??= new(ambientClarityLF, ambientClarityHF);
+                ambientFilter.SetGain(ambientClarityLF, ambientClarityHF);
+            }
         }
 
         // Apply raytraced EAX results to ALReverbEffects

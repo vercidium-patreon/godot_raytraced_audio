@@ -108,8 +108,8 @@ public partial class VercidiumAudioSource : ALSource3D
 
         if (!Engine.IsEditorHint())
         {
-            // Register for device recreated callback to re-play sounds
-            ALManager.instance.RegisterDeviceRecreatedCallback(OnDeviceRecreated);
+            // Register for a callback to re-play sounds when changing devices
+            RegisterDeviceRecreatedCallback(OnDeviceRecreated);
         }
 
         // Must create the emitter after the parent VercidiumAudio node is initialised

@@ -22,8 +22,8 @@ public partial class VercidiumAudioSourceAmbient : ALSource3D
         if (Engine.IsEditorHint())
             return;
 
-        // Register for device recreated callback to re-play sounds
-        ALManager.instance.RegisterDeviceRecreatedCallback(OnDeviceRecreated);
+        // Register for a callback to re-play sounds when changing devices
+        RegisterDeviceRecreatedCallback(OnDeviceRecreated);
 
         base._Ready();
     }

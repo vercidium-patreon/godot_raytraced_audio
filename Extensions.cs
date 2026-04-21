@@ -1,5 +1,6 @@
 global using static godot_raytraced_audio.Extensions;
 global using static godot_raytraced_audio.GlobalHelpers;
+using godot_openal;
 
 namespace godot_raytraced_audio;
 
@@ -22,4 +23,8 @@ internal static class Extensions
         );
     }
 
+    public static bool GodotOpenALEnabled => ALManager.instance != null;
+
+    public static void RegisterDeviceRecreatedCallback(Action callback) => ALManager.instance?.RegisterDeviceRecreatedCallback(callback);
+    public static void RegisterDeviceDestroyedCallback(Action callback) => ALManager.instance?.RegisterDeviceDestroyedCallback(callback);
 }

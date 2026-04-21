@@ -85,10 +85,13 @@ public partial class VercidiumAudioEmitter : Node3D
     }
 
     void OnRaytracedByAnotherEmitter(vaudio.Emitter emitter)
-    {
-        Debug.Assert(filter == null);
+    {        
+        if (GodotOpenALEnabled)
+        {
+            Debug.Assert(filter == null);
+            filter = new(1, 1);
+        }
 
-        filter = new(1, 1);
         ApplyRaytracingResults();
 
         if (RaytraceOnce)
@@ -119,7 +122,7 @@ public partial class VercidiumAudioEmitter : Node3D
             if (vercidiumAudio.listener.HasRaytracedTarget(this))
             {
                 var vaudioFilter = vercidiumAudio.listener.GetTargetFilter(this);
-                filter.SetGain(vaudioFilter.gainLF, vaudioFilter.gainHF);
+                filter?.SetGain(vaudioFilter.gainLF, vaudioFilter.gainHF);
             }
         }
     }
