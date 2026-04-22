@@ -114,6 +114,14 @@ public partial class VercidiumAudio : Node
             return;
         }
 
+        // Sync the AL listener to our main listener
+        if (GodotOpenALEnabled)
+        {
+            ALManager.instance.ListenerPosition = listener.GlobalPosition;
+            ALManager.instance.ListenerPitch = listener.GlobalRotation.X;
+            ALManager.instance.ListenerYaw = listener.GlobalRotation.Y;
+        }
+
         // Render the debug window from the perspective of the main listener
         context.CameraPosition = ToVAudio(listener.GlobalPosition);
         context.CameraPitch = listener.Pitch;
