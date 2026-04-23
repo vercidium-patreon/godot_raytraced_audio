@@ -118,13 +118,15 @@ public partial class VercidiumAudioSource : ALSource3D
 
     public override string[] _GetConfigurationWarnings()
     {
+        var baseWarnings = base._GetConfigurationWarnings();
+
         var sceneRoot = Engine.IsEditorHint() ? GetTree()?.EditedSceneRoot : GetTree()?.CurrentScene;
         if (sceneRoot == null)
-            return [];
+            return baseWarnings;
 
         var vercidiumAudioNode = sceneRoot.GetChildren().OfType<VercidiumAudio>().FirstOrDefault();
         if (vercidiumAudioNode == null)
-            return ["No VercidiumAudio node found. Ensure a VercidiumAudio node exists higher up the tree."];
+            return [.. baseWarnings, "No VercidiumAudio node found. Ensure a VercidiumAudio node exists higher up the tree."];
 
         // Find the top-level ancestor of this node (direct child of scene root)
         var ancestor = this as Node;
@@ -132,9 +134,9 @@ public partial class VercidiumAudioSource : ALSource3D
             ancestor = ancestor.GetParent();
 
         if (ancestor.GetIndex() < vercidiumAudioNode.GetIndex())
-            return ["This node must be lower in the scene tree than the VercidiumAudio node."];
+            return [.. baseWarnings, "This node must be lower in the scene tree than the VercidiumAudio node."];
 
-        return [];
+        return baseWarnings;
     }
 
     public void CreateEmitter()

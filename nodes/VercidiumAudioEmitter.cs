@@ -23,17 +23,15 @@ public partial class VercidiumAudioEmitter : Node3D
 
         vercidiumAudio = this.GetVercidiumAudioParent();
 
-        var test = _GetConfigurationWarnings();
-
         if (vercidiumAudio == null)
         {
-            GD.PushWarning($"[godot_raytraced_audio] Failed to initialise node {Name} because there is no VercidiumAudio node. Ensure a VercidiumAudio node exists higher up the tree");
+            VercidiumAudio.LogWarning($"Failed to initialise node {Name} because there is no VercidiumAudio node. Ensure a VercidiumAudio node exists higher up the tree");
             return;
         }
 
         if (!vercidiumAudio.Initialised)
         {
-            GD.PushWarning($"[godot_raytraced_audio] Failed to initialise node {Name} because the VercidiumAudio node is not initialised yet. Ensure the VercidiumAudio node is higher up the tree");
+            VercidiumAudio.LogWarning($"Failed to initialise node {Name} because the VercidiumAudio node is not initialised yet. Ensure the VercidiumAudio node is higher up the tree");
             return;
         }
 
