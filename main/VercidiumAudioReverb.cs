@@ -103,6 +103,8 @@ public partial class VercidiumAudio : Node
             pan = vaudio.RaytracingContext.CalculateListenerRelativePan(pan, listener.Pitch, listener.Yaw);
 
             effect.effectSlotGain = eax.EffectSlotGain[listener.emitter];
+            effect.effectSlotGain = Math.Max(0, effect.effectSlotGain);
+            effect.effectSlotGain = Math.Min(1, effect.effectSlotGain);
 
             // TODO - separate pan for late reverb and reflections
             effect.lateReverbPan[0] = pan.X;
