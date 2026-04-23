@@ -25,7 +25,7 @@ public partial class VercidiumAudioMaterial : Node
         // Prevent duplicates
         if (vercidiumAudio.customMaterials.TryGetValue(MaterialType, out VercidiumAudioMaterial value))
         {
-            GD.PushWarning($"The VercidiumAudioMaterial node {Name} has the same material ID ({MaterialType}) as the VercidiumAudioMaterial node {value.Name}. Please change this to another ID");
+            VercidiumAudio.LogError($"The VercidiumAudioMaterial node {Name} has the same material ID ({MaterialType}) as the VercidiumAudioMaterial node {value.Name}. Please change this to another ID");
 
             return;
         }
