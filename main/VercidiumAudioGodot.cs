@@ -118,14 +118,14 @@ public partial class VercidiumAudio : Node
         if (GodotOpenALEnabled)
         {
             ALManager.instance.ListenerPosition = listener.GlobalPosition;
-            ALManager.instance.ListenerPitch = listener.GlobalRotation.X;
-            ALManager.instance.ListenerYaw = listener.GlobalRotation.Y;
+            ALManager.instance.ListenerPitch = listener.Pitch;
+            ALManager.instance.ListenerYaw = listener.Yaw;
         }
 
         // Render the debug window from the perspective of the main listener
-        context.CameraPosition = ToVAudio(listener.GlobalPosition);
-        context.CameraPitch = listener.Pitch;
-        context.CameraYaw = listener.Yaw;
+       // context.CameraPosition = ToVAudio(listener.GlobalPosition);
+        //context.CameraPitch = listener.Pitch;
+        //context.CameraYaw = listener.Yaw;
         context.FieldOfView = float.DegreesToRadians(90);
 
         context.Update();

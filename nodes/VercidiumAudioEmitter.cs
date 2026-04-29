@@ -237,7 +237,7 @@ public partial class VercidiumAudioEmitter : Node3D
     [ExportGroup("Raytracing Quality")]
 
     int _ReverbRayCount = 128;
-    [Export(PropertyHint.Range, "32,1024,16")]
+    [Export(PropertyHint.Range, "0,1024,1")]
     public int ReverbRayCount
     {
         get => _ReverbRayCount;
@@ -264,7 +264,7 @@ public partial class VercidiumAudioEmitter : Node3D
     }
     
     int _OcclusionRayCount = 128;
-    [Export(PropertyHint.Range, "32,1024,16")] public int OcclusionRayCount
+    [Export(PropertyHint.Range, "0,1024,1")] public int OcclusionRayCount
     { 
         get => _OcclusionRayCount;
         set
@@ -290,7 +290,7 @@ public partial class VercidiumAudioEmitter : Node3D
     }
 
     int _PermeationRayCount = 128;
-    [Export(PropertyHint.Range, "32,1024,16")] public int PermeationRayCount
+    [Export(PropertyHint.Range, "0,1024,1")] public int PermeationRayCount
     { 
         get => _PermeationRayCount;
         set
@@ -316,7 +316,7 @@ public partial class VercidiumAudioEmitter : Node3D
     }
 
     int _AmbientPermeationRayCount = 128;
-    [Export(PropertyHint.Range, "32,1024,16")] public int AmbientPermeationRayCount
+    [Export(PropertyHint.Range, "0,1024,1")] public int AmbientPermeationRayCount
     { 
         get => _AmbientPermeationRayCount;
         set
@@ -342,7 +342,7 @@ public partial class VercidiumAudioEmitter : Node3D
     }
 
     int _VisualisationRayCount = 0;
-    [Export(PropertyHint.Range, "0,1024,16")] public int VisualisationRayCount
+    [Export(PropertyHint.Range, "0,1024,1")] public int VisualisationRayCount
     { 
         get => _VisualisationRayCount;
         set
