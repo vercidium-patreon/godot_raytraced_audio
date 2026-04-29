@@ -33,7 +33,7 @@ public partial class VercidiumAudioSource : ALSource3D
     [ExportGroup("Raytracing Quality")]
 
     int _ReverbRayCount = 32;
-    [Export(PropertyHint.Range, "16,1024,16")]
+    [Export(PropertyHint.Range, "0,1024,1")]
     public int ReverbRayCount
     {
         get => _ReverbRayCount;
@@ -42,7 +42,9 @@ public partial class VercidiumAudioSource : ALSource3D
             _ReverbRayCount = value;
 
             if (emitter != null)
+            {
                 emitter.ReverbRayCount = value;
+            }
         }
     }
 
@@ -56,12 +58,61 @@ public partial class VercidiumAudioSource : ALSource3D
             _ReverbBounceCount = value;
 
             if (emitter != null)
+            {
                 emitter.ReverbBounceCount = value;
+            }
+        }
+    }
+
+    int _MaxEchogramTime = 1000;
+    [Export(PropertyHint.Range, "1,5000,1")]
+    public int MaxEchogramTime
+    {
+        get => _MaxEchogramTime;
+        set
+        {
+            _MaxEchogramTime = value;
+
+            if (emitter != null)
+            {
+                emitter.MaxEchogramTime = value;
+            }
+        }
+    }
+
+    int _EchogramGranularity = 10;
+    [Export(PropertyHint.Range, "1,200,1")]
+    public int EchogramGranularity
+    {
+        get => _EchogramGranularity;
+        set
+        {
+            _EchogramGranularity = value;
+
+            if (emitter != null)
+            {
+                emitter.EchogramGranularity = value;
+            }
+        }
+    }
+
+    float _ReverbEnergyCap = 0.05f;
+    [Export(PropertyHint.Range, "0,1")] public float ReverbEnergyCap
+    {
+        get => _ReverbEnergyCap;
+        set
+        {
+            _ReverbEnergyCap = value;
+
+            if (emitter != null)
+            {
+                emitter.ReverbEnergyCap = value;
+            }
         }
     }
 
     int _VisualisationRayCount = 0;
-    [Export(PropertyHint.Range, "0,128,4")]
+    [Export(PropertyHint.Range, "0,128,1")]
     public int VisualisationRayCount
     {
         get => _VisualisationRayCount;
@@ -154,6 +205,9 @@ public partial class VercidiumAudioSource : ALSource3D
             // Less rays for individual sources
             ReverbRayCount = ReverbRayCount,
             ReverbBounceCount = ReverbBounceCount,
+            ReverbEnergyCap = ReverbEnergyCap,
+            MaxEchogramTime = MaxEchogramTime,
+            EchogramGranularity = EchogramGranularity,
 
             VisualisationRayCount = VisualisationRayCount,
             VisualisationBounceCount = VisualisationBounceCount,

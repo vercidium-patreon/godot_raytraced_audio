@@ -36,7 +36,8 @@ public partial class VercidiumAudio : Node
 
     void OnReverbUpdated()
     {
-        // Update ambient gain
+        // Update ambient gain (if reverb enabled)
+        if (listener.ProcessedReverb != null)
         {
             var ambientClarityLF = listener.ProcessedReverb.OutsidePercent;
             var ambientClarityHF = listener.ProcessedReverb.OutsidePercent;
@@ -56,7 +57,8 @@ public partial class VercidiumAudio : Node
         }
 
         // Apply raytraced EAX results to ALReverbEffects
-        CopyReverb(listener.EAX, listenerReverbEffect, false);
+        if (listener.EAX != null)
+            CopyReverb(listener.EAX, listenerReverbEffect, false);
 
         for (int i = 0; i < context.GroupedEAX.Count; i++)
         {

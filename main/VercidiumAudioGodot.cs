@@ -114,6 +114,8 @@ public partial class VercidiumAudio : Node
             return;
         }
 
+        listener.emitter.PermeationColor = new vaudio.Color(255, 255, 0);
+
         // Sync the AL listener to our main listener
         if (GodotOpenALEnabled)
         {

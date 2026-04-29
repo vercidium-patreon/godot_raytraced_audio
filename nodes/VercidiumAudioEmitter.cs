@@ -246,23 +246,78 @@ public partial class VercidiumAudioEmitter : Node3D
             _ReverbRayCount = value;
 
             if (emitter != null)
+            {
                 emitter.ReverbRayCount = value;
+                emitter.ReverbEnergyCap = emitter.ReverbRayCount * emitter.ReverbBounceCount * _ReverbEnergyCap;
+            }
         }
     }
 
     int _ReverbBounceCount = 64;
-    [Export(PropertyHint.Range, "1,128,1")] public int ReverbBounceCount
-    { 
+    [Export(PropertyHint.Range, "1,128,1")]
+    public int ReverbBounceCount
+    {
         get => _ReverbBounceCount;
         set
         {
             _ReverbBounceCount = value;
 
             if (emitter != null)
+            {
                 emitter.ReverbBounceCount = value;
+                emitter.ReverbEnergyCap = emitter.ReverbRayCount * emitter.ReverbBounceCount * _ReverbEnergyCap;
+            }
         }
     }
-    
+
+
+    int _MaxEchogramTime = 1000;
+    [Export(PropertyHint.Range, "1,5000,1")]
+    public int MaxEchogramTime
+    {
+        get => _MaxEchogramTime;
+        set
+        {
+            _MaxEchogramTime = value;
+
+            if (emitter != null)
+            {
+                emitter.MaxEchogramTime = value;
+            }
+        }
+    }
+
+    int _EchogramGranularity = 10;
+    [Export(PropertyHint.Range, "1,200,1")]
+    public int EchogramGranularity
+    {
+        get => _EchogramGranularity;
+        set
+        {
+            _EchogramGranularity = value;
+
+            if (emitter != null)
+            {
+                emitter.EchogramGranularity = value;
+            }
+        }
+    }
+
+    float _ReverbEnergyCap = 0.05f;
+    [Export(PropertyHint.Range, "0,1")] public float ReverbEnergyCap
+    { 
+        get => _ReverbEnergyCap;
+        set
+        {
+            _ReverbEnergyCap = value;
+
+            if (emitter != null)
+            {
+                emitter.ReverbEnergyCap = emitter.ReverbRayCount * emitter.ReverbBounceCount * value;
+            }
+        }
+    }
+
     int _OcclusionRayCount = 128;
     [Export(PropertyHint.Range, "0,1024,1")] public int OcclusionRayCount
     { 
