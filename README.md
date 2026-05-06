@@ -1,3 +1,6 @@
+> [!WARNING]
+> This repository is deprecated. See the new repository at [vercidium-audio/vaudio-godot-openal](https://github.com/vercidium-audio/vaudio-godot-openal)
+
 # Vercidium Audio
 
 Raytraced audio system with realistic occlusion and reverb for Godot 4.
